@@ -1,0 +1,26 @@
+# Local environment
+.env
+.env.*
+!.env.example
+
+# Python
+**/.venv/
+**/__pycache__/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/.coverage
+**/htmlcov/
+
+# Node and Next.js
+**/node_modules/
+**/.next/
+**/out/
+**/coverage/
+**/*.tsbuildinfo
+
+# Local tooling and operating-system files
+.pi/fabric/
+.pi/hindsight/
+**/.fallow/
+.DS_Store
