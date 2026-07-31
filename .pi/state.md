@@ -1,7 +1,7 @@
 ---
 purpose: Detailed current state and cross-session handoff for CodeAtlas
 updated: 2026-08-01
-status: phase-5-license-selected-release-blocked
+status: phase-5-source-published-deployment-blocked
 ---
 
 # CodeAtlas State and Session Handoff
@@ -18,13 +18,13 @@ Phases 0–4 are implemented. CodeAtlas analyzes bounded public TypeScript and J
 |---|---|
 | Checkout | `<repository-root>` |
 | Branch | `main` |
-| HEAD | Unborn; no commit exists |
-| Worktree | All maintained project files are untracked |
-| Current phase | Phase 5 in progress; Phases 0–4 complete, publication and deployment decisions blocked |
+| HEAD | `main` tracks `origin/main`; use `git rev-parse HEAD` for the current commit |
+| Worktree | Expected clean after the publication handoff commit |
+| Current phase | Phase 5 in progress; source publication complete, deployment and advisory blockers remain |
 | Last full verification | `./scripts/verify.sh`, exit 0 on 2026-08-01 |
-| Publication status | Not published and not licensed |
+| Publication status | Public at `https://github.com/ryan-brosas/codeatlas` under Apache-2.0 |
 
-Do not claim a commit, remote, deployment, or publication. None exists.
+Initial source publication completed on `main`; no deployment or live demo exists.
 
 ## Approved Product Decisions
 
@@ -350,7 +350,7 @@ First read AGENTS.md, .pi/state.md, .pi/tech-stack.md, and .pi/roadmap.md comple
 
 Run git status --short --branch --untracked-files=all and ./scripts/verify.sh before editing. Phases 0–4 are implemented and verified. CodeAtlas now provides bounded architecture, cited questions, an injected semantic-retrieval seam, and source-backed change-impact reports through FastAPI and the Next.js UI. GraphMCP was used to locate current and inspiration seams, but all behavior was verified against source and rewritten around CodeAtlas evidence contracts. The full gate passes 81 Python tests and 5 web tests. CI and release guidance exist.
 
-Phase 5 cannot honestly finish without resolving the dependency advisories and authorizing/selecting deployment providers. After those decisions, implement the documented rate limits, durable artifacts, cleanup, secrets and observability, run CI remotely, and verify a live bounded demo. Do not commit, push, publish, deploy or add dependencies without explicit authorization.
+Phase 5 cannot honestly finish without resolving the dependency advisories, selecting the deployment provider, and verifying a live bounded demo. After those decisions, implement the documented rate limits, durable artifacts, cleanup, secrets and observability, run CI remotely, and verify a live bounded demo. Do not commit, push, publish, deploy or add dependencies without explicit authorization.
 
 After work, update .pi/state.md with exact files, observed verification, unresolved risks, and the next-session priority.
 ```

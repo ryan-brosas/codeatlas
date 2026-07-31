@@ -1,6 +1,6 @@
 # CodeAtlas
 
-CodeAtlas is a codebase intelligence product intended for a future open-source release for understanding unfamiliar repositories before changing them.
+CodeAtlas is an open-source codebase intelligence product for understanding unfamiliar repositories before changing them.
 
 The product direction combines:
 

@@ -2,7 +2,7 @@
 
 ## Current status
 
-CodeAtlas is a pre-publication prototype. It has no deployed service, supported release, or public security intake channel. Do not treat the current checkout as a production service.
+CodeAtlas has a public source repository but remains a pre-release prototype. It has no deployed service, supported release, or public security intake channel. Do not treat the current checkout as a production service.
 
 ## Reporting a vulnerability
 

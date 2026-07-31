@@ -1,6 +1,6 @@
 # Contributing to CodeAtlas
 
-CodeAtlas is licensed under Apache-2.0 and remains pre-publication while its security and deployment blockers are resolved. Contributions are accepted under the same license.
+CodeAtlas is licensed under Apache-2.0 and remains pre-release while its security and deployment blockers are resolved. Contributions are accepted under the same license.
 
 ## Development setup
 
