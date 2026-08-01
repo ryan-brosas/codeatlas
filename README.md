@@ -56,11 +56,22 @@ Run every current check from the repository root:
 
 This covers Python formatting, linting, strict typing and tests, plus web tests, ESLint, TypeScript, deterministic code-smell analysis, and the production build.
 
+## Evaluation
+
+Run the deterministic offline source-intelligence corpus without network access:
+
+```bash
+cd analysis
+uv run python tests/test_evaluation_corpus.py
+```
+
+The synthetic corpus reports pass rates for expected status, citation support, candidate location, direct and transitive impact, unique limitations, and uncertainty-warning preservation. Pytest enforces the expected report during the repository gate.
+
 ## Project status
 
 Phase 2 structural understanding, Phase 3 cited questions, and Phase 4 change impact are implemented. A user can analyze a bounded public TypeScript or JavaScript repository, inspect commit-pinned architecture, ask deterministic cited questions, and trace candidate change locations into direct and transitive dependent modules. Semantic retrieval uses the same evidence contract through an injected embedding protocol; no model or embedding provider dependency is selected. Reports expose confidence, unresolved evidence, traversal limits, and the warning that dependency proximity is not certainty.
 
-A live `sindresorhus/p-map` impact probe located `pMap` at `index.js:1` and cited three direct dependents at their import lines. The complete local gate currently covers 89 Python tests and 12 web tests. The web dependency graph now audits clean through tested PostCSS and Sharp overrides. Process-local request, repository, concurrency, timeout, memory, and five-minute commit-keyed snapshot-cache bounds protect the deployed single-replica demo. Railway serves only the web publicly; live architecture, cited-question, impact, HTTPS hardening, and rate-limit behavior have been verified.
+A live `sindresorhus/p-map` impact probe located `pMap` at `index.js:1` and cited three direct dependents at their import lines. The complete local gate currently covers 90 Python tests and 12 web tests. The web dependency graph now audits clean through tested PostCSS and Sharp overrides. Process-local request, repository, concurrency, timeout, memory, and five-minute commit-keyed snapshot-cache bounds protect the deployed single-replica demo. Railway serves only the web publicly; live architecture, cited-question, impact, HTTPS hardening, and rate-limit behavior have been verified.
 
 ## License
 
