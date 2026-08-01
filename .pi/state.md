@@ -20,11 +20,11 @@ Phases 0–4 are implemented. CodeAtlas analyzes bounded public TypeScript and J
 | Branch | `main` |
 | HEAD | `main` tracks `origin/main`; use `git rev-parse HEAD` for the current commit |
 | Worktree | Use `git status --short --branch --untracked-files=all`; preserve unrelated work |
-| Current phase | Phase 5 complete; telemetry deployed; live source acquisition currently degraded |
+| Current phase | Phase 5 complete; telemetry and optional source-auth seam deployed; live source acquisition verified |
 | Last full verification | `./scripts/verify.sh`, exit 0 on 2026-08-01 with 101 Python and 12 web tests; offline corpus 9/9 checks; npm audit 0 vulnerabilities |
-| Publication status | Source public and synchronized under Apache-2.0; demo shell healthy at `https://web-production-f07d2d.up.railway.app`, but fresh repository analysis returned controlled source-host 502 responses after the telemetry deployment |
+| Publication status | Source public and synchronized under Apache-2.0; live demo healthy at `https://web-production-f07d2d.up.railway.app` with anonymous GitHub access recovered |
 
-The bounded Railway demo and matching public source are live, but repository analysis is temporarily unavailable until GitHub access from Railway recovers or an explicitly approved least-privileged credential is configured. The demo is not a production SLA-backed service.
+The bounded Railway demo and matching public source are live. Anonymous GitHub access recovered without configuring a token; the optional least-privilege seam remains available if measured quota failures recur. The demo is not a production SLA-backed service.
 
 ## Approved Product Decisions
 
@@ -215,7 +215,7 @@ Observed behavior:
 - `CONTRIBUTING.md`, `SECURITY.md`, and `docs/deployment.md` document setup, contribution boundaries, current security status, deployed topology, secrets, quotas, retention, cleanup and scaling limits.
 - Railway project `codeatlas` (`af286454-d14e-4f03-9954-6fe0a410f832`) is deployed in `production` with one `web` and one `analysis` replica. Only `https://web-production-f07d2d.up.railway.app` is public; analysis uses private networking and has no public domain.
 - Live Chromium journeys passed architecture and cited-question analysis for `sindresorhus/yocto-queue`, change impact for `sindresorhus/p-map`, and controlled rate limiting. An adversarial review found that accepted `www.github.com` aliases initially used a different repository key; a regression assertion failed first, the key was canonicalized, and deployment `ff912c42-0a23-424f-a2fc-b66d86437df4` then accepted six alternating canonical/www requests and rejected the seventh from their shared bucket. Railway logs exposed a distinct proxy-derived `srcIp`, proving the client admission key does not collapse all traffic into the unknown bucket.
-- The public boundary redirects HTTP to HTTPS and emits HSTS, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, and `Permissions-Policy`. The final web deployment was `ff912c42-0a23-424f-a2fc-b66d86437df4`; the final analysis deployment using `uv run --no-dev` was `79bdccb3-c597-401a-87a1-08d7de2c907c`. Both report `SUCCESS`, but new repository analysis is temporarily degraded by the source-host failure described below.
+- The public boundary redirects HTTP to HTTPS and emits HSTS, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, and `Permissions-Policy`. The final web deployment was `ff912c42-0a23-424f-a2fc-b66d86437df4`; the final analysis deployment using `uv run --no-dev` was `9bb74038-4c8b-419b-a58a-93b655974865`. Both report `SUCCESS`, and fresh public architecture analysis succeeded after anonymous source access recovered.
 - Exact PostCSS 8.5.25 and Sharp 0.35.3 overrides resolve the audited transitive findings. `npm audit` reports zero vulnerabilities, and the unchanged test, lint, type, Fallow and production-build gates pass.
 - The workflow exists on public `main`. GitHub Actions run `30677631563` completed successfully for release commit `cfe0b521a0ea46a6e03a7690b1fe685cfbf9d7d1`. All 15 release paths were then fetched at that exact SHA and matched the local bytes.
 ## Post-release evaluation
@@ -234,7 +234,7 @@ Observed behavior:
 
 - `analysis_telemetry.py` defines separate fixed enums for counters and durations, an injected observer protocol, a no-op default, and a lock-protected in-memory aggregate. It stores only counter totals and duration sample/total/max values, so memory is bounded by the enum set. Cache, GitHub source and complete-analysis timing share one private production observer; there is no endpoint or provider dependency.
 - A live-source local probe made two mitt architecture requests and observed one cache miss, one hit, two revision samples, one archive sample and two complete-analysis samples. No labels or payload fields exist in the telemetry schema. Telemetry commit `d5b62878f1a1ed7cc999990a178fc5f1ca5ea2bd` passed GitHub Actions run `30679541817`; analysis deployment `79bdccb3-c597-401a-87a1-08d7de2c907c` reached `SUCCESS`.
-- Two fresh public Chromium submissions after that deployment returned the controlled `GitHub source is unavailable.` error; Railway logs recorded HTTP 502 from `/v1/architecture`. The local anonymous GitHub quota remained 29/60, so it does not establish Railway egress quota. A read-only in-container quota probe was blocked because the account has no registered SSH key; no key was added. Do not upload the local `gh` credential without explicit approval of its scopes and intended Railway use. Scope inspection showed that credential has `gist`, `read:org`, `repo`, and `workflow`, which is materially broader than public-source read access and therefore unsuitable for automatic reuse. The adapter now supports an optional `CODEATLAS_GITHUB_TOKEN` bearer header only when explicitly configured; anonymous requests remain the default.
+- Two fresh public Chromium submissions after that deployment returned the controlled `GitHub source is unavailable.` error; Railway logs recorded HTTP 502 from `/v1/architecture`. The local anonymous GitHub quota remained 29/60, so it does not establish Railway egress quota. A read-only in-container quota probe was blocked because the account has no registered SSH key; no key was added. Do not upload the local `gh` credential without explicit approval of its scopes and intended Railway use. Scope inspection showed that credential has `gist`, `read:org`, `repo`, and `workflow`, which is materially broader than public-source read access and therefore unsuitable for automatic reuse. The adapter now supports an optional `CODEATLAS_GITHUB_TOKEN` bearer header only when explicitly configured; anonymous requests remain the default. Optional-auth commit `e9883b7fc1455c03596fccab4e58a583d8aacecd` passed GitHub Actions run `30679944806`; deployment `9bb74038-4c8b-419b-a58a-93b655974865` reached `SUCCESS` with no token configured, and the subsequent public pinned-architecture probe succeeded.
 
 ## Quality and Verification Contract
 
@@ -317,7 +317,7 @@ Apache-2.0 is selected, the source repository is public, GitHub private vulnerab
 
 ### Live GitHub source access
 
-Two fresh public requests returned controlled HTTP 502 responses after deployment while the service health check remained successful. Railway logs confirm the failing boundary is `/v1/architecture`; local anonymous quota does not prove Railway egress quota. Wait for anonymous quota recovery and re-probe, or explicitly approve a dedicated least-privileged GitHub credential stored only in Railway. Do not reuse the local `gh` credential implicitly. Resume condition: a fresh public architecture request succeeds and cites a pinned revision.
+Two fresh public requests temporarily returned controlled HTTP 502 responses while service health remained successful; Railway logs localized the failure to `/v1/architecture`. Anonymous access later recovered without a token: a fresh public request returned `developit/mitt` at pinned revision `6b41670516ed` with 3 modules, 8 relationships and 5 limitations. Continue monitoring quota failures. If they recur, use only a separately approved least-privileged `CODEATLAS_GITHUB_TOKEN`; the local `gh` credential has broad `gist`, `read:org`, `repo` and `workflow` scopes and must not be reused.
 
 ### Code graph
 
@@ -335,7 +335,7 @@ The repository is on `main`, tracking `origin/main`. Release commit `cfe0b521a0e
 | When does measured workload justify durable artifact storage? | Determines provider, cross-replica consistency, retention and cleanup ownership | No; bounded process-local reuse handles the single-replica demo |
 | Which embedding/model providers should be supported first? | Affects cost, privacy and adapter shape | No; retrieval is later |
 | When will Next.js adopt the patched PostCSS and Sharp ranges? | Allows removal of tested transitive overrides | No; the current graph audits clean |
-| Should Railway receive a dedicated least-privileged GitHub token? | Raises source-host quota and restores predictable demo availability | Yes if anonymous access does not recover; scope and secret handling require explicit approval |
+| Should Railway receive a dedicated least-privileged GitHub token? | Raises source-host quota and improves predictable demo availability | Not currently; anonymous access recovered. Require explicit scope and secret approval if failures recur |
 
 ## Proposed Next Slice
 
