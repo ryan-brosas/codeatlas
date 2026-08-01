@@ -16,6 +16,7 @@ from codeatlas_analysis.repository_acquisition import (
     read_repository_zip,
 )
 from codeatlas_analysis.repository_intake import RepositoryIdentity
+from codeatlas_analysis.repository_snapshot_cache import RepositorySnapshotCache
 
 _MAX_COMMIT_RESPONSE_BYTES = 256 * 1024
 _COMMIT_SHA = re.compile(r"^[0-9a-f]{40}$")
@@ -157,9 +158,11 @@ class GitHubArchiveSource:
         self,
         transport: HttpTransport,
         limits: AcquisitionLimits | None = None,
+        cache: RepositorySnapshotCache | None = None,
     ) -> None:
         self._transport = transport
         self._limits = limits or AcquisitionLimits()
+        self._cache = cache
 
     def acquire(self, repository: RepositoryIdentity) -> RepositorySnapshot:
         owner = quote(repository.owner, safe="")
@@ -184,14 +187,22 @@ class GitHubArchiveSource:
                 "GitHub returned an invalid repository revision.",
             )
 
+        if self._cache is not None:
+            cached = self._cache.get(repository.id, revision)
+            if cached is not None:
+                return cached
+
         archive_bytes = self._transport.get(
             f"{api_root}/zipball/{revision}",
             max_bytes=self._limits.max_archive_bytes,
             timeout_seconds=self._limits.request_timeout_seconds,
         )
-        return read_repository_zip(
+        snapshot = read_repository_zip(
             repository=repository,
             revision=revision,
             archive_bytes=archive_bytes,
             limits=self._limits,
         )
+        if self._cache is not None:
+            self._cache.put(snapshot)
+        return snapshot

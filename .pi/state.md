@@ -21,7 +21,7 @@ Phases 0–4 are implemented. CodeAtlas analyzes bounded public TypeScript and J
 | HEAD | `main` tracks `origin/main`; use `git rev-parse HEAD` for the current commit |
 | Worktree | Modified by the approved Phase 5 release-readiness slice; no commit requested |
 | Current phase | Phase 5 complete; live deployment and public source verified |
-| Last full verification | `./scripts/verify.sh`, exit 0 on 2026-08-01 with 82 Python and 12 web tests |
+| Last full verification | `./scripts/verify.sh`, exit 0 on 2026-08-01 with 89 Python and 12 web tests |
 | Publication status | Source public at `https://github.com/ryan-brosas/codeatlas` under Apache-2.0 and synchronized with the live demo at `https://web-production-f07d2d.up.railway.app` |
 
 The bounded Railway demo and matching public source are live. The demo is not a production SLA-backed service.
@@ -58,6 +58,7 @@ web/                         Next.js product interface
 analysis/                    Python analysis and evidence service
   src/codeatlas_analysis/    FastAPI package, intake core and bounded snapshot reader
   src/codeatlas_analysis/github_repository_source.py  GitHub REST/archive adapter
+  src/codeatlas_analysis/repository_snapshot_cache.py  Bounded commit-keyed snapshot reuse
   src/codeatlas_analysis/repository_structure.py       Repository/file/module/symbol evidence
   src/codeatlas_analysis/tree_sitter_parser.py         TypeScript/JavaScript syntax adapter
   src/codeatlas_analysis/architecture_view.py           Source-cited architecture projection
@@ -138,7 +139,7 @@ Source: `analysis/src/codeatlas_analysis/api.py`
 - `RepositoryAnalysis.answer` composes bounded acquisition, parsing, retrieval and fact construction. `POST /v1/questions` exposes the generated `RepositoryQuestionRequest` and `CitedAnswer` schemas with typed 400/413/422/502 errors.
 - The generated web action posts questions after architecture analysis. The accessible UI shows loading, typed errors, insufficient/unsupported messages, verified facts, path/line citations and “No model inference used.”
 - A live full-path question probe for `sindresorhus/yocto-queue` returned HTTP 200 and cited `Queue` at `index.d.ts:1` and `index.js:15` with an empty inference list.
-- Question requests currently reacquire and reparse source. This avoids hidden persistence but is not suitable for deployment-scale rate limits without stored revision artifacts or caching.
+- Every question resolves the latest source revision. Matching immutable snapshots are reused from the bounded process-local cache, then reparsed; no durable artifact persistence is used.
 
 ### Repository acquisition
 
@@ -146,9 +147,9 @@ Source: `analysis/src/codeatlas_analysis/api.py`
 - ZIP snapshots are decoded in memory. Only UTF-8 `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, `.cjs` and `.json` files are retained in deterministic path order.
 - Defaults cap downloads at 20 MiB, entries at 10,000, selected files at 5,000, declared uncompressed content at 50 MiB, individual files at 512 KiB, paths at 20 components and requests at 10 seconds.
 - Absolute, traversal and backslash paths are rejected; duplicate paths and malformed archives are rejected; symbolic links are ignored. No archive content is written to disk or executed.
-- `github_repository_source.py` resolves the latest default-branch commit, validates a full 40-character SHA and requests the ZIP by that SHA.
+- `github_repository_source.py` resolves the latest default-branch commit on every request, validates a full 40-character SHA, and requests the ZIP by that SHA only when the injected snapshot cache misses.
 - The urllib adapter permits only HTTPS `api.github.com` and `codeload.github.com` origins, validates redirects before following them, checks declared and streamed byte lengths, and sends an explicit user agent and GitHub API version.
-- Network transport and GitHub source behavior are replaceable protocols. Unit tests use deterministic in-memory archives and fake transports; a live probe acquired five files from `sindresorhus/yocto-queue` at commit `b07eac099753833b29d06c614149904445739776`.
+- Network transport, GitHub source behavior, and snapshot caching are replaceable protocols. `repository_snapshot_cache.py` provides the production process-local implementation with lock-protected fixed TTL, LRU, entry and selected-source byte limits. Unit tests use deterministic snapshots, archives, clocks, and transports.
 - Acquisition is intentionally not wired into `POST /v1/repositories` until the execution/job boundary is selected.
 
 ### Structural source model
@@ -222,9 +223,10 @@ Observed behavior:
 - Mitt and yocto-queue questions returned concrete source citations with empty inference. The unsupported billing question returned `insufficient_evidence` with no facts, evidence, or inference.
 - The p-map impact query exposed a deterministic ranking defect: related `pMapSkip` in `index.d.ts` tied exact `pMap` and won by path order, hiding the useful reverse dependencies. A parsed regression fixture failed first.
 - Lexical symbol scoring now adds a bounded 0.25-weight precision component based on matched symbol terms over total symbol terms. Query coverage remains dominant; exact `pMap` now scores 2.25 and related `pMapSkip` scores lower without a path- or language-specific heuristic.
-- Re-evaluation selected `index.js:1` for pMap, reported medium confidence, restored three direct dependent modules, preserved two unresolved-relationship warnings, and completed in 943 ms. The full repository gate passes with 82 Python and 12 web tests. Fix commit `8624ce7eaadbdae69114e3b19dba79cebac0edc2` passed GitHub Actions run `30678051346`.
+- Re-evaluation selected `index.js:1` for pMap, reported medium confidence, restored three direct dependent modules, preserved two unresolved-relationship warnings, and completed in 943 ms. The full repository gate passes with 89 Python and 12 web tests. Fix commit `8624ce7eaadbdae69114e3b19dba79cebac0edc2` passed GitHub Actions run `30678051346`.
 - Private analysis deployment `b0e8a6fa-f24d-420e-afe7-fb229f351f05` reached `SUCCESS`. A fresh live Chromium journey through the public web service rendered pMap at `index.js · L1`, three direct impacted modules at their import lines, medium confidence, and both uncertainty warnings.
-- Three repeated mitt question requests at the same revision returned identical status and citations in 632, 578, and 573 ms (578 ms median). Every question still follows the source reacquisition and reparsing path, so commit-keyed artifacts are justified as the next scaling design boundary, but no persistence provider or dependency is selected.
+- Before caching, three repeated mitt question requests at the same revision returned identical status and citations in 632, 578, and 573 ms (578 ms median). Stage profiling attributed a 578 ms median to acquisition, 4 ms to parsing, and effectively 0 ms to retrieval; separate probes measured latest-commit lookup near 125 ms and immutable ZIP transfer near 450 ms.
+- The production FastAPI assembly now resolves the latest SHA on every request and reuses matching immutable snapshots for five minutes under 32-entry and 16 MiB source-byte limits. One cold mitt question took 1,193 ms; two warm requests took 131 and 145 ms (138 ms median) with identical citations. This is process-local reuse, not durable persistence.
 - Mitt architecture initially projected eight limitations because one unresolved or external import produced one warning per imported symbol. A regression case with default and named imports failed first. Exact duplicate `(code, path, line, subject)` records are now collapsed in first-source order; re-evaluation returned five distinct limitations in 867 ms without hiding either unresolved entry point or any distinct external dependency. Fix commit `6091ae672b827170003e3d812170b64d585fab42` passed GitHub Actions run `30678298746`; analysis deployment `df7fe77c-6940-402c-b73d-49e42d3388d3` reached `SUCCESS`, and a fresh public Chromium journey rendered 3 modules, 8 relationships, and 5 retained limitations.
 
 ## Quality and Verification Contract
@@ -263,7 +265,7 @@ npm run build
 
 ### Last observed evidence
 
-- Python: 82 tests passed; Ruff formatting and lint passed; strict mypy passed.
+- Python: 89 tests passed; Ruff formatting and lint passed; strict mypy passed.
 - Web: 12 tests across 4 files passed; ESLint passed; TypeScript passed; Fallow reported 0 issues in maintained code; Next.js production build passed.
 - Local and Railway live probes: `sindresorhus/yocto-queue` verified architecture and cited questions; `sindresorhus/p-map` verified change impact with one candidate and three direct dependents. The public Railway service also verified proxy-derived rate limiting, HTTPS redirection and security headers.
 
@@ -290,7 +292,7 @@ Child-agent claims do not replace rerunning these commands in a new session.
 - Phase 3 starts with deterministic lexical and structural retrieval rather than embeddings. This makes ranking behavior inspectable and gives later semantic retrieval a measurable baseline.
 - The retrieval contract uses CodeAtlas-native paths, symbol spans and relationships. Current-project and inspiration graph searches found no coherent reusable retrieval slice; generic document citation schemas were not copied because they discard code-symbol semantics.
 - Deterministic cited facts precede generated prose. Fixed templates ensure every current statement is inspectably derived from one evidence kind and citation; future model inference has a separate field rather than sharing the verified-fact channel.
-- The question endpoint reuses the bounded synchronous `RepositoryAnalysis` service. Reacquisition is accepted only for the current local slice and is documented rather than obscured behind an in-memory cache with undefined ownership.
+- The question endpoint reuses the bounded synchronous `RepositoryAnalysis` service. Cache ownership is explicit in the GitHub source adapter through an injected snapshot-cache protocol; production uses a fixed-TTL, LRU, entry- and source-byte-bounded in-memory implementation.
 - GraphMCP health-probed the exact broad `<work-root>` index and located current CodeAtlas retrieval seams plus Ragas/Chonkie embedding injection examples. CodeAtlas rewrote only the provider-injection, fixed-dimension, cosine and threshold invariants; it rejected fallback-to-unrelated-results behavior.
 - GraphMCP located `pi-code-review-graph/src/graph/impact.ts`. CodeAtlas independently adapted its bounded visited-set traversal invariant to reverse only resolved repository relationships, preserve source citations, report direct/transitive depth, and warn that proximity is not certainty.
 - The live p-map probe exposed a tree-sitter native crash caused by Point access on large declarations. Source locations now derive from one precomputed byte-offset map; a generated 500-line subprocess regression test guards the original segmentation fault.
@@ -319,7 +321,7 @@ The repository is on `main`, tracking `origin/main`. Release commit `cfe0b521a0e
 | Question | Why it matters | Blocking now? |
 |---|---|---|
 | When should bounded synchronous analysis move to a durable job? | Determines cancellation, quotas, retries and persistence for deployment-scale workloads | Not for the current bounded local slice |
-| What persistence should hold repository metadata and analysis artifacts? | Affects local development and deployment portability | Not for a minimal in-memory contract |
+| When does measured workload justify durable artifact storage? | Determines provider, cross-replica consistency, retention and cleanup ownership | No; bounded process-local reuse handles the single-replica demo |
 | Which embedding/model providers should be supported first? | Affects cost, privacy and adapter shape | No; retrieval is later |
 | When will Next.js adopt the patched PostCSS and Sharp ranges? | Allows removal of tested transitive overrides | No; the current graph audits clean |
 
@@ -327,14 +329,14 @@ The repository is on `main`, tracking `origin/main`. Release commit `cfe0b521a0e
 
 This is a proposal, not an approved implementation contract.
 
-**Goal:** specify a provider-neutral, commit-keyed analysis artifact lifecycle before adding persistence.
+**Goal:** turn the representative post-release probes into a deterministic evaluation corpus for source-citation and change-impact quality.
 
 Candidate acceptance boundary:
 
-1. Key immutable artifacts by normalized repository identity plus resolved full commit SHA.
-2. Define capacity, TTL, deletion, failure, and concurrent-request behavior without adding a storage dependency.
-3. Preserve the current framework-neutral `RepositoryAnalysis` boundary and keep source-host/storage details in adapters.
-4. Measure the proposed cache against the deterministic repeated-analysis baseline before selecting an in-memory or durable provider.
+1. Store repository revision, question, expected candidate or status, and citation invariants without storing third-party source.
+2. Separate network acquisition timing from deterministic offline scoring so source-host variance does not make CI flaky.
+3. Cover exact-symbol collisions, unsupported questions, duplicate limitations, direct impact, and preserved uncertainty warnings.
+4. Report citation support and candidate-location pass rates before changing retrieval weights again.
 5. Keep generated wiki prose, autonomous edits, and pull-request creation outside scope unless explicitly approved.
 
 ## New-Session Bootstrap
@@ -357,7 +359,7 @@ Continue CodeAtlas from the repository root.
 
 First read AGENTS.md, .pi/state.md, .pi/tech-stack.md, and .pi/roadmap.md completely. Treat .pi/state.md as the current handoff, but verify its claims against source and commands. Preserve unrelated work; do not commit or push unless requested.
 
-Run git status --short --branch --untracked-files=all and ./scripts/verify.sh before editing. Phases 0–5 are complete, public, and verified. Phase 5 added audit-clean PostCSS and Sharp overrides, process-local public request controls, one-replica Railway configs, security headers, canonical repository limiter keys, and synchronized release guidance. The full gate passes 82 Python tests and 12 web tests; npm audit reports zero vulnerabilities.
+Run git status --short --branch --untracked-files=all and ./scripts/verify.sh before editing. Phases 0–5 are complete, public, and verified. Phase 5 added audit-clean PostCSS and Sharp overrides, process-local public request controls, one-replica Railway configs, security headers, canonical repository limiter keys, and synchronized release guidance. The full gate passes 89 Python tests and 12 web tests; npm audit reports zero vulnerabilities.
 
 The bounded demo is live at https://web-production-f07d2d.up.railway.app with private analysis networking. The proposed next slice is evidence-led post-release evaluation focused on source-verifiable change planning; it is not yet approved.
 

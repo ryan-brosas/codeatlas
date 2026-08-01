@@ -24,6 +24,9 @@ from codeatlas_analysis.repository_intake import (
     RepositoryUrlError,
     normalize_public_github_repository,
 )
+from codeatlas_analysis.repository_snapshot_cache import (
+    InMemoryRepositorySnapshotCache,
+)
 
 
 class HealthResponse(BaseModel):
@@ -64,7 +67,14 @@ class ApiErrorResponse(BaseModel):
 
 
 _repository_intake = InMemoryRepositoryIntake()
-_repository_analysis = RepositoryAnalysis(GitHubArchiveSource(UrlLibHttpTransport()))
+_repository_snapshot_cache = InMemoryRepositorySnapshotCache(
+    max_entries=32,
+    max_source_bytes=16 * 1024 * 1024,
+    ttl_seconds=300.0,
+)
+_repository_analysis = RepositoryAnalysis(
+    GitHubArchiveSource(UrlLibHttpTransport(), cache=_repository_snapshot_cache)
+)
 app = FastAPI(
     title="CodeAtlas Analysis API",
     version="0.1.0",

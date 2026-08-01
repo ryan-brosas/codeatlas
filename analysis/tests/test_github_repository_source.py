@@ -42,6 +42,33 @@ def _zip_source() -> bytes:
     return buffer.getvalue()
 
 
+def test_reuses_cached_archive_after_resolving_the_same_revision() -> None:
+    from codeatlas_analysis.repository_snapshot_cache import (
+        InMemoryRepositorySnapshotCache,
+    )
+
+    revision = "0123456789abcdef0123456789abcdef01234567"
+    commit = json.dumps([{"sha": revision}]).encode()
+    transport = RecordingTransport([commit, _zip_source(), commit])
+    cache = InMemoryRepositorySnapshotCache(
+        max_entries=2,
+        max_source_bytes=1024,
+        ttl_seconds=60.0,
+    )
+    repository = normalize_public_github_repository("https://github.com/example/project")
+    source = GitHubArchiveSource(transport, cache=cache)
+
+    first = source.acquire(repository)
+    second = source.acquire(repository)
+
+    assert second is first
+    assert [url for url, _max_bytes, _timeout in transport.requests] == [
+        "https://api.github.com/repos/example/project/commits?per_page=1",
+        f"https://api.github.com/repos/example/project/zipball/{revision}",
+        "https://api.github.com/repos/example/project/commits?per_page=1",
+    ]
+
+
 def test_acquires_a_commit_pinned_github_archive() -> None:
     revision = "0123456789abcdef0123456789abcdef01234567"
     transport = RecordingTransport([json.dumps([{"sha": revision}]).encode(), _zip_source()])

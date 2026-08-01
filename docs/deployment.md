@@ -16,14 +16,14 @@ The live demo is https://web-production-f07d2d.up.railway.app. The browser recei
 
 ## Current execution model
 
-Architecture, cited-question, and change-impact requests run synchronously within existing acquisition limits. Question and impact requests reacquire and reparse source because persistent artifacts and cache ownership are not selected.
+Architecture, cited-question, and change-impact requests run synchronously within existing acquisition limits. Every request resolves the latest GitHub commit. Immutable snapshots are reused only when the normalized repository identity and full commit SHA match a process-local cache entry; parsing then repeats from that bounded snapshot.
 
 The web server-action boundary now enforces process-local demo controls: 12 requests per client and 6 per repository per minute, 2 concurrent analyses, a 30-second execution timeout, and at most 2,000 tracked rate-limit keys. Expired keys are removed during admission. These controls require one web replica and a trusted deployment proxy that appends the client address to `X-Forwarded-For`; unknown clients share one conservative bucket. They are suitable only for the first bounded demo, not horizontally scaled traffic.
 
 ## Controls required before scaling
 
-1. Move repeat analysis behind commit-keyed artifacts. If work can outlive an HTTP request, use a durable queue with cancellation, retries, idempotency, and observable terminal states.
-2. Define artifact TTLs and deletion. Never persist downloaded public source longer than required for the documented product behavior.
+1. If artifacts must survive process restart or horizontal scaling, replace the process-local cache through its adapter boundary. If work can outlive an HTTP request, use a durable queue with cancellation, retries, idempotency, and observable terminal states.
+2. Define durable artifact TTLs and deletion before selecting a provider. Never persist downloaded public source longer than required for the documented product behavior.
 3. Configure structured logs without source contents, query text that may contain secrets, credentials, or archive bodies.
 4. Keep the FastAPI service private to the web service. Enforce HTTPS and explicit origins at any additional public boundary.
 5. Add health, latency, failure-rate, GitHub quota, archive-limit, queue-depth, and cleanup metrics.
@@ -36,11 +36,13 @@ No secret is currently required for public unauthenticated GitHub access. A prod
 
 Existing archive limits cap download size, entry count, selected files, uncompressed bytes, individual file size, path depth, and request duration. The single-replica web adapter adds process-local request-rate, repository-rate, concurrency, timeout, and key-count limits. Horizontal scaling requires a shared limiter or provider-enforced equivalent.
 
-Future stored analysis should use the normalized repository identity plus full commit SHA as its immutable key. Expired artifacts and failed-job payloads require scheduled deletion with observable success and bounded retries.
+The analysis process caches at most 32 immutable snapshots and 16 MiB of selected source bytes for a fixed five-minute TTL. LRU eviction enforces both limits, oversized snapshots bypass caching, and expired entries are removed on access. Concurrent misses may download independently and converge on the same key. The cache never writes source to disk and disappears on restart.
+
+Future durable analysis should keep the normalized repository identity plus full commit SHA as its immutable key. Expired artifacts and failed-job payloads require scheduled deletion with observable success and bounded retries.
 
 ## Scaling decisions remain
 
-Railway hosts the bounded web and analysis processes. Artifact storage, queue, and observability providers remain unselected replaceable adapters. Select them only after measuring the public demo workload and confirming that they support the controls above.
+Railway hosts the bounded web and analysis processes. Durable artifact storage, queue, and observability providers remain unselected replaceable adapters. Select them only after measuring the public demo workload and confirming that they support the controls above.
 
 ## First-demo deployment
 
