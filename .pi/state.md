@@ -1,7 +1,7 @@
 ---
 purpose: Detailed current state and cross-session handoff for CodeAtlas
 updated: 2026-08-01
-status: phase-5-live-publication-sync-pending
+status: phase-5-complete-live-public
 ---
 
 # CodeAtlas State and Session Handoff
@@ -10,7 +10,7 @@ status: phase-5-live-publication-sync-pending
 
 CodeAtlas is a new codebase-intelligence product intended to demonstrate AI-engineering depth and production web-development skill. It will help developers understand unfamiliar repositories through navigable architecture, source-cited answers, and change-impact guidance.
 
-Phases 0–4 are implemented. CodeAtlas analyzes bounded public TypeScript and JavaScript repositories into commit-pinned architecture, deterministic cited answers, an injected semantic-retrieval seam, and source-backed change-impact reports. Impact reports locate an implementation candidate, traverse direct and transitive reverse dependencies, cite import lines, expose confidence and missing evidence, and warn that proximity is not certainty. The web exposes all three verticals. Phase 5 implementation and deployment are verified: Apache-2.0, CI, contribution and security guidance, an audit-clean dependency graph, bounded abuse controls, and a two-service Railway deployment are in the working tree or live environment. The public web service uses private networking to analysis; live architecture, cited-question, impact, HTTPS hardening, and rate-limit behavior passed. Phase 5 remains in progress because public `main` still has the pre-deployment release documents and does not contain this uncommitted bounded-control slice.
+Phases 0–4 are implemented. CodeAtlas analyzes bounded public TypeScript and JavaScript repositories into commit-pinned architecture, deterministic cited answers, an injected semantic-retrieval seam, and source-backed change-impact reports. Impact reports locate an implementation candidate, traverse direct and transitive reverse dependencies, cite import lines, expose confidence and missing evidence, and warn that proximity is not certainty. The web exposes all three verticals. Phase 5 is complete. Apache-2.0, CI, contribution and security guidance, an audit-clean dependency graph, bounded abuse controls, and a two-service Railway deployment are public and verified. The public web service uses private networking to analysis; live architecture, cited-question, impact, HTTPS hardening, canonical repository limiting, and rate-limit behavior passed. Public `main` contains the deployed release documentation, configuration, tests, and bounded-control source.
 
 ## Current Position
 
@@ -20,11 +20,11 @@ Phases 0–4 are implemented. CodeAtlas analyzes bounded public TypeScript and J
 | Branch | `main` |
 | HEAD | `main` tracks `origin/main`; use `git rev-parse HEAD` for the current commit |
 | Worktree | Modified by the approved Phase 5 release-readiness slice; no commit requested |
-| Current phase | Phase 5 in progress; live deployment verified, public source synchronization pending explicit commit/push authorization |
+| Current phase | Phase 5 complete; live deployment and public source verified |
 | Last full verification | `./scripts/verify.sh`, exit 0 on 2026-08-01 with 81 Python and 12 web tests |
-| Publication status | Source public at `https://github.com/ryan-brosas/codeatlas` under Apache-2.0 and demo live at `https://web-production-f07d2d.up.railway.app`; public `main` does not yet include the uncommitted Phase 5 release slice |
+| Publication status | Source public at `https://github.com/ryan-brosas/codeatlas` under Apache-2.0 and synchronized with the live demo at `https://web-production-f07d2d.up.railway.app` |
 
-The bounded Railway demo is live, but release publication is incomplete until the verified working-tree slice is intentionally committed and pushed. The demo is not a production SLA-backed service.
+The bounded Railway demo and matching public source are live. The demo is not a production SLA-backed service.
 
 ## Approved Product Decisions
 
@@ -215,7 +215,7 @@ Observed behavior:
 - Live Chromium journeys passed architecture and cited-question analysis for `sindresorhus/yocto-queue`, change impact for `sindresorhus/p-map`, and controlled rate limiting. An adversarial review found that accepted `www.github.com` aliases initially used a different repository key; a regression assertion failed first, the key was canonicalized, and deployment `ff912c42-0a23-424f-a2fc-b66d86437df4` then accepted six alternating canonical/www requests and rejected the seventh from their shared bucket. Railway logs exposed a distinct proxy-derived `srcIp`, proving the client admission key does not collapse all traffic into the unknown bucket.
 - The public boundary redirects HTTP to HTTPS and emits HSTS, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, and `Permissions-Policy`. The final web deployment was `ff912c42-0a23-424f-a2fc-b66d86437df4`; the final analysis deployment using `uv run --no-dev` was `56169561-6269-42cf-b709-4f3471675817`. Both currently report `SUCCESS`.
 - Exact PostCSS 8.5.25 and Sharp 0.35.3 overrides resolve the audited transitive findings. `npm audit` reports zero vulnerabilities, and the unchanged test, lint, type, Fallow and production-build gates pass.
-- The workflow exists on public `main`. GitHub Actions run `30670434677` completed successfully for HEAD `330f547b767ddf206e8e7295844071e6ad26471c`; the preceding run was cancelled by the configured concurrency policy.
+- The workflow exists on public `main`. GitHub Actions run `30677631563` completed successfully for release commit `cfe0b521a0ea46a6e03a7690b1fe685cfbf9d7d1`. All 15 release paths were then fetched at that exact SHA and matched the local bytes.
 ## Quality and Verification Contract
 
 Run the repository gate from the project root:
@@ -293,7 +293,7 @@ Child-agent claims do not replace rerunning these commands in a new session.
 
 ### Open-source publication
 
-Apache-2.0 is selected, the source repository is public, GitHub private vulnerability reporting is enabled, and the publication-content review found no credential, runtime-artifact, private-data, oversized-file, or dependency-license blocker. However, remote `main` still has the pre-deployment README, security policy, deployment guide, and source because the verified Phase 5 slice is uncommitted.
+Apache-2.0 is selected, the source repository is public, GitHub private vulnerability reporting is enabled, and the publication-content review found no credential, runtime-artifact, private-data, oversized-file, or dependency-license blocker. Public `main` contains the verified release source and guidance.
 
 ### Code graph
 
@@ -301,7 +301,7 @@ The existing `<work-root>` CodeGraphContext index was discovered, but establishi
 
 ### Git state
 
-The repository is on `main` at `330f547b767ddf206e8e7295844071e6ad26471c`, tracking `origin/main`. The approved Phase 5 slice is intentionally uncommitted; preserve unrelated work and do not commit or push without a request.
+The repository is on `main`, tracking `origin/main`. Release commit `cfe0b521a0ea46a6e03a7690b1fe685cfbf9d7d1` is public and verified; use `git rev-parse HEAD` for the current completion-receipt commit. Preserve unrelated work and do not create later commits or pushes without a request.
 
 ## Open Questions
 
@@ -311,23 +311,19 @@ The repository is on `main` at `330f547b767ddf206e8e7295844071e6ad26471c`, track
 | What persistence should hold repository metadata and analysis artifacts? | Affects local development and deployment portability | Not for a minimal in-memory contract |
 | Which embedding/model providers should be supported first? | Affects cost, privacy and adapter shape | No; retrieval is later |
 | When will Next.js adopt the patched PostCSS and Sharp ranges? | Allows removal of tested transitive overrides | No; the current graph audits clean |
-| May the verified Phase 5 slice be committed and pushed to `main`? | Required for public source and release guidance to match the live deployment | Yes for final Phase 5 publication |
 
 ## Proposed Next Slice
 
-This is a proposal and requires explicit commit/push authorization.
+This is a proposal, not an approved implementation contract.
 
-**Goal:** synchronize the verified Phase 5 release slice to public `main` and prove the public source matches the live deployment.
+**Goal:** define the post-release roadmap around CodeAtlas's strongest distinction: source-verifiable change planning rather than generic generated documentation.
 
-Acceptance boundary:
+Candidate acceptance boundary:
 
-1. Reconfirm the exact owned file set and preserve unrelated work.
-2. Commit only the verified Phase 5 source, configuration, tests, and release documentation.
-3. Push `main`, observe the resulting GitHub Actions gate, and verify it succeeds at the pushed SHA.
-4. Re-read the public README, security policy, deployment guide, Railway configuration, and bounded-control source.
-5. Mark Phase 5 complete only after the public-source checks pass.
-
-After publication, define a separate evidence-led roadmap focused on source-verifiable change planning rather than generic generated documentation.
+1. Evaluate feature-location and impact reports on representative public repositories with expected evidence.
+2. Measure citation support, unsupported-question behavior, acquisition latency and repeated-analysis cost.
+3. Decide whether commit-keyed artifact persistence is justified before adding a provider.
+4. Keep generated wiki prose, autonomous edits and pull-request creation outside scope unless explicitly approved.
 
 ## New-Session Bootstrap
 
@@ -336,7 +332,7 @@ A new session should execute this sequence:
 1. Enter the repository root.
 2. Read `AGENTS.md` completely.
 3. Read `.pi/state.md`, `.pi/tech-stack.md`, and `.pi/roadmap.md`.
-4. Run `git status --short --branch --untracked-files=all` and preserve the approved uncommitted Phase 5 slice.
+4. Run `git status --short --branch --untracked-files=all` and preserve unrelated work.
 5. Run `./scripts/verify.sh` before changing behavior.
 6. Re-read the exact files owned by the next slice.
 7. Implement any approved next slice in small RED → GREEN → refactor increments.
@@ -347,11 +343,11 @@ A new session should execute this sequence:
 ```text
 Continue CodeAtlas from the repository root.
 
-First read AGENTS.md, .pi/state.md, .pi/tech-stack.md, and .pi/roadmap.md completely. Treat .pi/state.md as the current handoff, but verify its claims against source and commands. Preserve the approved uncommitted Phase 5 work and all unrelated work; do not commit or push unless requested.
+First read AGENTS.md, .pi/state.md, .pi/tech-stack.md, and .pi/roadmap.md completely. Treat .pi/state.md as the current handoff, but verify its claims against source and commands. Preserve unrelated work; do not commit or push unless requested.
 
-Run git status --short --branch --untracked-files=all and ./scripts/verify.sh before editing. Phases 0–4 are complete. Phase 5 is implemented and live but remains in progress because its verified working-tree slice has not been committed or pushed to public `main`. The slice adds audit-clean PostCSS and Sharp overrides, process-local public request controls, one-replica Railway configs, security headers, and synchronized release guidance. The full gate passes 81 Python tests and 12 web tests; npm audit reports zero vulnerabilities.
+Run git status --short --branch --untracked-files=all and ./scripts/verify.sh before editing. Phases 0–5 are complete, public, and verified. Phase 5 added audit-clean PostCSS and Sharp overrides, process-local public request controls, one-replica Railway configs, security headers, canonical repository limiter keys, and synchronized release guidance. The full gate passes 81 Python tests and 12 web tests; npm audit reports zero vulnerabilities.
 
-The bounded demo is live at https://web-production-f07d2d.up.railway.app with private analysis networking. The proposed next slice is publication synchronization, but commit and push require explicit user authorization.
+The bounded demo is live at https://web-production-f07d2d.up.railway.app with private analysis networking. The proposed next slice is evidence-led post-release evaluation focused on source-verifiable change planning; it is not yet approved.
 
 After work, update .pi/state.md with exact files, observed verification, unresolved risks, and the next-session priority.
 ```

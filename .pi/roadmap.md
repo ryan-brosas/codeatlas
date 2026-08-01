@@ -1,7 +1,7 @@
 ---
 purpose: Outcome-oriented roadmap for CodeAtlas
 updated: 2026-08-01
-status: active
+status: complete
 ---
 
 # CodeAtlas Roadmap
@@ -17,7 +17,7 @@ This roadmap gives future sessions direction without turning ordinary work into 
 | 2. Structural understanding | Build a source-backed repository and symbol model | Complete |
 | 3. Cited questions | Answer repository questions with inspectable evidence | Complete |
 | 4. Change impact | Explain implementation location and likely blast radius | Complete |
-| 5. Public release | Deploy a safe demo and publish a contribution-ready repository | In progress |
+| 5. Public release | Deploy a safe demo and publish a contribution-ready repository | Complete |
 
 ## Phase 0: Foundation
 
@@ -107,7 +107,7 @@ This roadmap gives future sessions direction without turning ordinary work into 
 - [x] README includes a concise demo, architecture and measured results.
 - [x] CONTRIBUTING and SECURITY guidance exist.
 - [x] CI runs the same repository verification gate used locally.
-- [ ] Public `main` reflects the deployed release documentation, configuration, and bounded-control source.
+- [x] Public `main` reflects the deployed release documentation, configuration, and bounded-control source.
 
 ## Roadmap Rules
 
