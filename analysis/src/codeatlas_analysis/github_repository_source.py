@@ -2,12 +2,18 @@ import json
 import re
 from collections.abc import Callable, Mapping
 from http.client import HTTPMessage
+from time import monotonic
 from types import TracebackType
 from typing import IO, Protocol, Self, cast
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
+from codeatlas_analysis.analysis_telemetry import (
+    AnalysisDuration,
+    AnalysisObserver,
+    NullAnalysisObserver,
+)
 from codeatlas_analysis.repository_acquisition import (
     AcquisitionErrorCode,
     AcquisitionLimits,
@@ -159,19 +165,23 @@ class GitHubArchiveSource:
         transport: HttpTransport,
         limits: AcquisitionLimits | None = None,
         cache: RepositorySnapshotCache | None = None,
+        observer: AnalysisObserver | None = None,
+        now: Callable[[], float] = monotonic,
     ) -> None:
         self._transport = transport
         self._limits = limits or AcquisitionLimits()
         self._cache = cache
+        self._observer = observer or NullAnalysisObserver()
+        self._now = now
 
     def acquire(self, repository: RepositoryIdentity) -> RepositorySnapshot:
         owner = quote(repository.owner, safe="")
         name = quote(repository.name, safe="")
         api_root = f"https://api.github.com/repos/{owner}/{name}"
-        commit_response = self._transport.get(
+        commit_response = self._timed_get(
+            AnalysisDuration.REVISION_LOOKUP_SECONDS,
             f"{api_root}/commits?per_page=1",
             max_bytes=_MAX_COMMIT_RESPONSE_BYTES,
-            timeout_seconds=self._limits.request_timeout_seconds,
         )
         try:
             commits = json.loads(commit_response)
@@ -192,10 +202,10 @@ class GitHubArchiveSource:
             if cached is not None:
                 return cached
 
-        archive_bytes = self._transport.get(
+        archive_bytes = self._timed_get(
+            AnalysisDuration.ARCHIVE_DOWNLOAD_SECONDS,
             f"{api_root}/zipball/{revision}",
             max_bytes=self._limits.max_archive_bytes,
-            timeout_seconds=self._limits.request_timeout_seconds,
         )
         snapshot = read_repository_zip(
             repository=repository,
@@ -206,3 +216,14 @@ class GitHubArchiveSource:
         if self._cache is not None:
             self._cache.put(snapshot)
         return snapshot
+
+    def _timed_get(self, metric: AnalysisDuration, url: str, *, max_bytes: int) -> bytes:
+        started_at = self._now()
+        try:
+            return self._transport.get(
+                url,
+                max_bytes=max_bytes,
+                timeout_seconds=self._limits.request_timeout_seconds,
+            )
+        finally:
+            self._observer.observe(metric, self._now() - started_at)

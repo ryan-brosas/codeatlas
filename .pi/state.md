@@ -21,7 +21,7 @@ Phases 0–4 are implemented. CodeAtlas analyzes bounded public TypeScript and J
 | HEAD | `main` tracks `origin/main`; use `git rev-parse HEAD` for the current commit |
 | Worktree | Modified by the approved Phase 5 release-readiness slice; no commit requested |
 | Current phase | Phase 5 complete; live deployment and public source verified |
-| Last full verification | `./scripts/verify.sh`, exit 0 on 2026-08-01 with 90 Python and 12 web tests; offline corpus 4/4 cases and 9/9 checks |
+| Last full verification | `./scripts/verify.sh`, exit 0 on 2026-08-01 with 100 Python and 12 web tests; offline corpus 9/9 checks; npm audit 0 vulnerabilities |
 | Publication status | Source public at `https://github.com/ryan-brosas/codeatlas` under Apache-2.0 and synchronized with the live demo at `https://web-production-f07d2d.up.railway.app` |
 
 The bounded Railway demo and matching public source are live. The demo is not a production SLA-backed service.
@@ -57,6 +57,7 @@ web/                         Next.js product interface
 
 analysis/                    Python analysis and evidence service
   src/codeatlas_analysis/    FastAPI package, intake core and bounded snapshot reader
+  src/codeatlas_analysis/analysis_telemetry.py         Privacy-safe aggregate observer
   src/codeatlas_analysis/github_repository_source.py  GitHub REST/archive adapter
   src/codeatlas_analysis/repository_snapshot_cache.py  Bounded commit-keyed snapshot reuse
   src/codeatlas_analysis/repository_structure.py       Repository/file/module/symbol evidence
@@ -231,6 +232,9 @@ Observed behavior:
 
 - A test-only synthetic evaluation corpus stores no third-party source and makes no network calls. Its executable report covers four cases and nine checks across expected status, citation support, candidate location, impact traversal, unique limitations, and warning preservation; every metric currently reports a 1.0 pass rate. Pytest asserts the exact report so retrieval-weight changes cannot silently degrade these invariants. Corpus commit `04e0eec40a410a580af9312943d68082e159783a` passed GitHub Actions run `30679109560`.
 
+- `analysis_telemetry.py` defines separate fixed enums for counters and durations, an injected observer protocol, a no-op default, and a lock-protected in-memory aggregate. It stores only counter totals and duration sample/total/max values, so memory is bounded by the enum set. Cache, GitHub source and complete-analysis timing share one private production observer; there is no endpoint or provider dependency.
+- A live-source local probe made two mitt architecture requests and observed one cache miss, one hit, two revision samples, one archive sample and two complete-analysis samples. No labels or payload fields exist in the telemetry schema.
+
 ## Quality and Verification Contract
 
 Run the repository gate from the project root:
@@ -267,7 +271,7 @@ npm run build
 
 ### Last observed evidence
 
-- Python: 90 tests passed; Ruff formatting and lint passed; strict mypy passed.
+- Python: 100 tests passed; Ruff formatting and lint passed; strict mypy passed.
 - Web: 12 tests across 4 files passed; ESLint passed; TypeScript passed; Fallow reported 0 issues in maintained code; Next.js production build passed.
 - Local and Railway live probes: `sindresorhus/yocto-queue` verified architecture and cited questions; `sindresorhus/p-map` verified change impact with one candidate and three direct dependents. The public Railway service also verified proxy-derived rate limiting, HTTPS redirection and security headers.
 
@@ -329,17 +333,7 @@ The repository is on `main`, tracking `origin/main`. Release commit `cfe0b521a0e
 
 ## Proposed Next Slice
 
-This is a proposal, not an approved implementation contract.
-
-**Goal:** define privacy-safe operational telemetry for acquisition and snapshot-cache effectiveness before selecting an observability provider.
-
-Candidate acceptance boundary:
-
-1. Count cache hits, misses, skips, evictions, and expirations without repository URLs, source, queries, or client identifiers.
-2. Measure revision lookup, archive download, and analysis latency through an injected framework-neutral observer.
-3. Keep metrics bounded and process-local for the single-replica demo; do not add a provider dependency or public diagnostics endpoint.
-4. Prove instrumentation does not change acquisition, cache, citation, or impact behavior.
-5. Use measured workload—not intuition—to decide whether durable storage or cross-replica coordination is needed.
+No implementation slice is currently approved. Operate the bounded demo and gather aggregate workload evidence first. Select an observability export, durable storage, or cross-replica coordination only when measured traffic demonstrates that the current single-process boundaries are insufficient. Generated wiki prose, autonomous edits, and pull-request creation remain outside scope unless explicitly approved.
 
 ## New-Session Bootstrap
 
@@ -361,7 +355,7 @@ Continue CodeAtlas from the repository root.
 
 First read AGENTS.md, .pi/state.md, .pi/tech-stack.md, and .pi/roadmap.md completely. Treat .pi/state.md as the current handoff, but verify its claims against source and commands. Preserve unrelated work; do not commit or push unless requested.
 
-Run git status --short --branch --untracked-files=all and ./scripts/verify.sh before editing. Phases 0–5 are complete, public, and verified. Phase 5 added audit-clean PostCSS and Sharp overrides, process-local public request controls, one-replica Railway configs, security headers, canonical repository limiter keys, and synchronized release guidance. The full gate passes 90 Python tests and 12 web tests; npm audit reports zero vulnerabilities.
+Run git status --short --branch --untracked-files=all and ./scripts/verify.sh before editing. Phases 0–5 are complete, public, and verified. Phase 5 added audit-clean PostCSS and Sharp overrides, process-local public request controls, one-replica Railway configs, security headers, canonical repository limiter keys, and synchronized release guidance. The full gate passes 100 Python tests and 12 web tests; npm audit reports zero vulnerabilities.
 
 The bounded demo is live at https://web-production-f07d2d.up.railway.app with private analysis networking. The proposed next slice is evidence-led post-release evaluation focused on source-verifiable change planning; it is not yet approved.
 

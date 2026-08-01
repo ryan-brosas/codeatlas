@@ -17,11 +17,12 @@ A useful report includes the affected path or endpoint, reproduction steps using
 - Archive paths, redirects, malformed content, and unsupported source types are controlled boundaries.
 - The product stores no model, vector-store, persistence, source-host, or deployment credentials.
 - Generated source claims remain separate from future model inference.
+- Operational telemetry uses fixed metric names and aggregate count/total/max values only. It carries no repository URLs, source, questions, client identifiers, or credentials and has no public diagnostics endpoint.
 
 ## Known pre-release limitations
 
 - `npm audit` is clean with exact PostCSS 8.5.25 and Sharp 0.35.3 overrides. Next.js 16.2.12 still declares older transitive ranges, so keep the complete web gate and audit as release checks until upstream catches up.
 - Process-local rate, repository, concurrency, timeout, and key-count controls protect the verified single-replica web boundary. They are not a distributed limiter. No durable job system, durable artifact persistence, or authentication boundary exists.
-- The Railway web domain redirects HTTP to HTTPS and emits HSTS, MIME-sniffing, framing, referrer, and permissions-policy headers. The analysis service has no public domain.
+- The Railway web domain redirects HTTP to HTTPS and emits HSTS, MIME-sniffing, framing, referrer, and permissions-policy headers. The analysis service has no public domain. Process-local telemetry resets on restart and is not exported to an observability provider.
 
 Security fixes must pass `./scripts/verify.sh` and include a regression test when the failure is reproducible.

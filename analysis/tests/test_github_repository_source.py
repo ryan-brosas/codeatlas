@@ -200,3 +200,30 @@ def test_http_transport_rejects_untrusted_final_hosts() -> None:
         )
 
     assert raised.value.code is AcquisitionErrorCode.INVALID_SOURCE_RESPONSE
+
+
+def test_records_revision_and_archive_durations_without_repository_labels() -> None:
+    from codeatlas_analysis.analysis_telemetry import (
+        AnalysisDuration,
+        InMemoryAnalysisTelemetry,
+    )
+
+    revision = "0123456789abcdef0123456789abcdef01234567"
+    transport = RecordingTransport([json.dumps([{"sha": revision}]).encode(), _zip_source()])
+    telemetry = InMemoryAnalysisTelemetry()
+    clock = iter((0.0, 0.1, 0.1, 0.5))
+    source = GitHubArchiveSource(
+        transport,
+        observer=telemetry,
+        now=lambda: next(clock),
+    )
+
+    source.acquire(normalize_public_github_repository("https://github.com/example/project"))
+
+    assert [
+        (item.metric, item.samples, item.total_seconds, item.max_seconds)
+        for item in telemetry.snapshot().durations
+    ] == [
+        (AnalysisDuration.ARCHIVE_DOWNLOAD_SECONDS, 1, 0.4, 0.4),
+        (AnalysisDuration.REVISION_LOOKUP_SECONDS, 1, 0.1, 0.1),
+    ]

@@ -5,6 +5,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from codeatlas_analysis.analysis_telemetry import InMemoryAnalysisTelemetry
 from codeatlas_analysis.architecture_view import ArchitectureView
 from codeatlas_analysis.change_impact import ChangeImpactReport
 from codeatlas_analysis.cited_answers import CitedAnswer
@@ -67,13 +68,20 @@ class ApiErrorResponse(BaseModel):
 
 
 _repository_intake = InMemoryRepositoryIntake()
+_analysis_telemetry = InMemoryAnalysisTelemetry()
 _repository_snapshot_cache = InMemoryRepositorySnapshotCache(
     max_entries=32,
     max_source_bytes=16 * 1024 * 1024,
     ttl_seconds=300.0,
+    observer=_analysis_telemetry,
 )
 _repository_analysis = RepositoryAnalysis(
-    GitHubArchiveSource(UrlLibHttpTransport(), cache=_repository_snapshot_cache)
+    GitHubArchiveSource(
+        UrlLibHttpTransport(),
+        cache=_repository_snapshot_cache,
+        observer=_analysis_telemetry,
+    ),
+    observer=_analysis_telemetry,
 )
 app = FastAPI(
     title="CodeAtlas Analysis API",

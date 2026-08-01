@@ -1,5 +1,12 @@
+from collections.abc import Callable
+from time import monotonic
 from typing import Protocol
 
+from codeatlas_analysis.analysis_telemetry import (
+    AnalysisDuration,
+    AnalysisObserver,
+    NullAnalysisObserver,
+)
 from codeatlas_analysis.architecture_view import (
     ArchitectureView,
     build_architecture_view,
@@ -30,14 +37,22 @@ class RepositoryAnalysis:
         source: RepositorySource,
         parser: ModuleParser = parse_source_module,
         retriever: EvidenceRetriever = retrieve_evidence,
+        observer: AnalysisObserver | None = None,
+        now: Callable[[], float] = monotonic,
     ) -> None:
         self._source = source
         self._parser = parser
         self._retriever = retriever
+        self._observer = observer or NullAnalysisObserver()
+        self._now = now
 
     def _structure(self, repository: RepositoryIdentity) -> RepositoryStructure:
-        snapshot = self._source.acquire(repository)
-        return analyze_repository(snapshot, self._parser)
+        started_at = self._now()
+        try:
+            snapshot = self._source.acquire(repository)
+            return analyze_repository(snapshot, self._parser)
+        finally:
+            self._observer.observe(AnalysisDuration.ANALYSIS_SECONDS, self._now() - started_at)
 
     def analyze(self, repository: RepositoryIdentity) -> ArchitectureView:
         return build_architecture_view(self._structure(repository))

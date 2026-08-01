@@ -18,6 +18,8 @@ The live demo is https://web-production-f07d2d.up.railway.app. The browser recei
 
 Architecture, cited-question, and change-impact requests run synchronously within existing acquisition limits. Every request resolves the latest GitHub commit. Immutable snapshots are reused only when the normalized repository identity and full commit SHA match a process-local cache entry; parsing then repeats from that bounded snapshot.
 
+The analysis process keeps fixed-name aggregate counters for cache hits, misses, skips, evictions and expirations plus count/total/max durations for revision lookup, archive download and complete analysis. Metrics contain no repository, source, query, client or credential labels; remain process-local; reset on restart; and have no public HTTP endpoint.
+
 The web server-action boundary now enforces process-local demo controls: 12 requests per client and 6 per repository per minute, 2 concurrent analyses, a 30-second execution timeout, and at most 2,000 tracked rate-limit keys. Expired keys are removed during admission. These controls require one web replica and a trusted deployment proxy that appends the client address to `X-Forwarded-For`; unknown clients share one conservative bucket. They are suitable only for the first bounded demo, not horizontally scaled traffic.
 
 ## Controls required before scaling
@@ -26,7 +28,7 @@ The web server-action boundary now enforces process-local demo controls: 12 requ
 2. Define durable artifact TTLs and deletion before selecting a provider. Never persist downloaded public source longer than required for the documented product behavior.
 3. Configure structured logs without source contents, query text that may contain secrets, credentials, or archive bodies.
 4. Keep the FastAPI service private to the web service. Enforce HTTPS and explicit origins at any additional public boundary.
-5. Add health, latency, failure-rate, GitHub quota, archive-limit, queue-depth, and cleanup metrics.
+5. Export the existing privacy-safe aggregates only after selecting an observability provider. Add failure-rate, GitHub quota, archive-limit, queue-depth, and cleanup metrics when those boundaries exist.
 
 ## Secrets
 

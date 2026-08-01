@@ -97,3 +97,27 @@ def test_keeps_semantic_provider_choice_outside_the_analysis_core() -> None:
 
     assert answer.evidence[0].citation.symbol == "validateSession"
     assert answer.evidence[0].method is RetrievalMethod.SEMANTIC
+
+
+def test_records_analysis_duration_without_repository_or_query_labels() -> None:
+    from codeatlas_analysis.analysis_telemetry import (
+        AnalysisDuration,
+        InMemoryAnalysisTelemetry,
+    )
+    from codeatlas_analysis.repository_analysis import RepositoryAnalysis
+
+    repository = normalize_public_github_repository("https://github.com/example/project")
+    telemetry = InMemoryAnalysisTelemetry()
+    clock = iter((0.0, 0.25))
+    analysis = RepositoryAnalysis(
+        StaticSource(repository, "export function run() {}\n"),
+        observer=telemetry,
+        now=lambda: next(clock),
+    )
+
+    analysis.analyze(repository)
+
+    assert [
+        (item.metric, item.samples, item.total_seconds, item.max_seconds)
+        for item in telemetry.snapshot().durations
+    ] == [(AnalysisDuration.ANALYSIS_SECONDS, 1, 0.25, 0.25)]

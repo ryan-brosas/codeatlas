@@ -6,6 +6,11 @@ from threading import Lock
 from time import monotonic
 from typing import Protocol
 
+from codeatlas_analysis.analysis_telemetry import (
+    AnalysisCounter,
+    AnalysisObserver,
+    NullAnalysisObserver,
+)
 from codeatlas_analysis.repository_acquisition import RepositorySnapshot
 
 SnapshotKey = tuple[str, str]
@@ -32,6 +37,7 @@ class InMemoryRepositorySnapshotCache:
         max_source_bytes: int,
         ttl_seconds: float,
         now: Callable[[], float] = monotonic,
+        observer: AnalysisObserver | None = None,
     ) -> None:
         if max_entries < 1 or max_source_bytes < 1 or not isfinite(ttl_seconds) or ttl_seconds <= 0:
             raise ValueError("Snapshot cache limits must be positive.")
@@ -39,6 +45,7 @@ class InMemoryRepositorySnapshotCache:
         self._max_source_bytes = max_source_bytes
         self._ttl_seconds = ttl_seconds
         self._now = now
+        self._observer = observer or NullAnalysisObserver()
         self._entries: OrderedDict[SnapshotKey, _CacheEntry] = OrderedDict()
         self._source_bytes = 0
         self._lock = Lock()
@@ -49,8 +56,10 @@ class InMemoryRepositorySnapshotCache:
             key = (repository_id, revision)
             entry = self._entries.get(key)
             if entry is None:
+                self._observer.increment(AnalysisCounter.CACHE_MISS)
                 return None
             self._entries.move_to_end(key)
+            self._observer.increment(AnalysisCounter.CACHE_HIT)
             return entry.snapshot
 
     def put(self, snapshot: RepositorySnapshot) -> None:
@@ -63,6 +72,7 @@ class InMemoryRepositorySnapshotCache:
             if replaced is not None:
                 self._source_bytes -= replaced.source_bytes
             if source_bytes > self._max_source_bytes:
+                self._observer.increment(AnalysisCounter.CACHE_SKIP)
                 return
             while self._entries and (
                 len(self._entries) >= self._max_entries
@@ -70,6 +80,7 @@ class InMemoryRepositorySnapshotCache:
             ):
                 _, evicted = self._entries.popitem(last=False)
                 self._source_bytes -= evicted.source_bytes
+                self._observer.increment(AnalysisCounter.CACHE_EVICTION)
             self._entries[key] = _CacheEntry(
                 snapshot=snapshot,
                 source_bytes=source_bytes,
@@ -82,3 +93,5 @@ class InMemoryRepositorySnapshotCache:
         for key in expired:
             entry = self._entries.pop(key)
             self._source_bytes -= entry.source_bytes
+        if expired:
+            self._observer.increment(AnalysisCounter.CACHE_EXPIRATION, len(expired))

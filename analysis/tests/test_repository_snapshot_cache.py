@@ -98,3 +98,42 @@ def test_rejects_non_positive_limits(
             max_source_bytes=max_source_bytes,
             ttl_seconds=ttl_seconds,
         )
+
+
+def test_records_privacy_safe_cache_lifecycle_counts() -> None:
+    from codeatlas_analysis.analysis_telemetry import (
+        AnalysisCounter,
+        InMemoryAnalysisTelemetry,
+    )
+    from codeatlas_analysis.repository_snapshot_cache import (
+        InMemoryRepositorySnapshotCache,
+    )
+
+    now = 0.0
+    telemetry = InMemoryAnalysisTelemetry()
+    cache = InMemoryRepositorySnapshotCache(
+        max_entries=1,
+        max_source_bytes=3,
+        ttl_seconds=5.0,
+        now=lambda: now,
+        observer=telemetry,
+    )
+    first = _snapshot("first", "a" * 40, 3)
+    second = _snapshot("second", "b" * 40, 3)
+    oversized = _snapshot("oversized", "c" * 40, 4)
+
+    cache.put(first)
+    assert cache.get(first.repository.id, first.revision) == first
+    assert cache.get("github.com/example/missing", "d" * 40) is None
+    cache.put(second)
+    cache.put(oversized)
+    now = 5.0
+    assert cache.get(second.repository.id, second.revision) is None
+
+    assert [(item.metric, item.count) for item in telemetry.snapshot().counts] == [
+        (AnalysisCounter.CACHE_EVICTION, 1),
+        (AnalysisCounter.CACHE_EXPIRATION, 1),
+        (AnalysisCounter.CACHE_HIT, 1),
+        (AnalysisCounter.CACHE_MISS, 2),
+        (AnalysisCounter.CACHE_SKIP, 1),
+    ]
