@@ -1,3 +1,4 @@
+from os import environ
 from typing import Annotated, Literal
 
 from fastapi import Depends, FastAPI, Request, status
@@ -77,7 +78,7 @@ _repository_snapshot_cache = InMemoryRepositorySnapshotCache(
 )
 _repository_analysis = RepositoryAnalysis(
     GitHubArchiveSource(
-        UrlLibHttpTransport(),
+        UrlLibHttpTransport(github_token=environ.get("CODEATLAS_GITHUB_TOKEN") or None),
         cache=_repository_snapshot_cache,
         observer=_analysis_telemetry,
     ),

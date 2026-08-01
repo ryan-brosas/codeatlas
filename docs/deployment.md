@@ -32,7 +32,7 @@ The web server-action boundary now enforces process-local demo controls: 12 requ
 
 ## Secrets
 
-No secret is currently required for public unauthenticated GitHub access. A production GitHub token or future embedding/model key must use the deployment platform's secret store, receive least privilege, never reach browser bundles, and never be logged. CI workflows must reference repository secrets only through environment variables.
+No secret is required for public unauthenticated GitHub access, but its quota may be insufficient for a shared demo. The analysis service optionally reads `CODEATLAS_GITHUB_TOKEN` and sends it only as a server-side GitHub bearer header. Use a dedicated least-privileged token stored in Railway, never repurpose a developer CLI credential, and never expose or log its value. Future embedding/model keys follow the same platform-secret and least-privilege boundary. CI workflows must reference repository secrets only through environment variables.
 
 ## Quotas and cleanup
 

@@ -163,6 +163,7 @@ def test_http_transport_bounds_github_https_responses() -> None:
     assert content == b"archive"
     assert requests[0][0].full_url.startswith("https://api.github.com/")
     assert requests[0][0].get_header("User-agent") == "CodeAtlas/0.1"
+    assert requests[0][0].get_header("Authorization") is None
     assert requests[0][1] == 4.0
 
 
@@ -227,3 +228,20 @@ def test_records_revision_and_archive_durations_without_repository_labels() -> N
         (AnalysisDuration.ARCHIVE_DOWNLOAD_SECONDS, 1, 0.4, 0.4),
         (AnalysisDuration.REVISION_LOOKUP_SECONDS, 1, 0.1, 0.1),
     ]
+
+
+def test_http_transport_sends_explicit_github_token_server_side() -> None:
+    response = FakeHttpResponse(b"archive", content_length="7")
+    requests: list[Request] = []
+
+    def open_request(request: Request, _timeout: float) -> FakeHttpResponse:
+        requests.append(request)
+        return response
+
+    UrlLibHttpTransport(open_request, github_token="test-token").get(
+        "https://api.github.com/repos/example/project/zipball/revision",
+        max_bytes=7,
+        timeout_seconds=4.0,
+    )
+
+    assert requests[0].get_header("Authorization") == "Bearer test-token"

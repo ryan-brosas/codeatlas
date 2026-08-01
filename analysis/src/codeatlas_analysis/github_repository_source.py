@@ -104,8 +104,14 @@ def _open_github_request(request: Request, timeout: float) -> HttpResponse:
 
 
 class UrlLibHttpTransport:
-    def __init__(self, open_request: OpenRequest = _open_github_request) -> None:
+    def __init__(
+        self,
+        open_request: OpenRequest = _open_github_request,
+        *,
+        github_token: str | None = None,
+    ) -> None:
         self._open_request = open_request
+        self._github_token = github_token
 
     def get(
         self,
@@ -115,14 +121,14 @@ class UrlLibHttpTransport:
         timeout_seconds: float,
     ) -> bytes:
         _validate_github_url(url)
-        request = Request(
-            url,
-            headers={
-                "Accept": "application/vnd.github+json",
-                "User-Agent": "CodeAtlas/0.1",
-                "X-GitHub-Api-Version": "2022-11-28",
-            },
-        )
+        headers = {
+            "Accept": "application/vnd.github+json",
+            "User-Agent": "CodeAtlas/0.1",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+        if self._github_token is not None:
+            headers["Authorization"] = f"Bearer {self._github_token}"
+        request = Request(url, headers=headers)
         try:
             with self._open_request(request, timeout_seconds) as response:
                 _validate_github_url(response.geturl())

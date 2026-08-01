@@ -19,12 +19,12 @@ Phases 0–4 are implemented. CodeAtlas analyzes bounded public TypeScript and J
 | Checkout | `<repository-root>` |
 | Branch | `main` |
 | HEAD | `main` tracks `origin/main`; use `git rev-parse HEAD` for the current commit |
-| Worktree | Modified by the approved Phase 5 release-readiness slice; no commit requested |
-| Current phase | Phase 5 complete; live deployment and public source verified |
-| Last full verification | `./scripts/verify.sh`, exit 0 on 2026-08-01 with 100 Python and 12 web tests; offline corpus 9/9 checks; npm audit 0 vulnerabilities |
-| Publication status | Source public at `https://github.com/ryan-brosas/codeatlas` under Apache-2.0 and synchronized with the live demo at `https://web-production-f07d2d.up.railway.app` |
+| Worktree | Use `git status --short --branch --untracked-files=all`; preserve unrelated work |
+| Current phase | Phase 5 complete; telemetry deployed; live source acquisition currently degraded |
+| Last full verification | `./scripts/verify.sh`, exit 0 on 2026-08-01 with 101 Python and 12 web tests; offline corpus 9/9 checks; npm audit 0 vulnerabilities |
+| Publication status | Source public and synchronized under Apache-2.0; demo shell healthy at `https://web-production-f07d2d.up.railway.app`, but fresh repository analysis returned controlled source-host 502 responses after the telemetry deployment |
 
-The bounded Railway demo and matching public source are live. The demo is not a production SLA-backed service.
+The bounded Railway demo and matching public source are live, but repository analysis is temporarily unavailable until GitHub access from Railway recovers or an explicitly approved least-privileged credential is configured. The demo is not a production SLA-backed service.
 
 ## Approved Product Decisions
 
@@ -215,7 +215,7 @@ Observed behavior:
 - `CONTRIBUTING.md`, `SECURITY.md`, and `docs/deployment.md` document setup, contribution boundaries, current security status, deployed topology, secrets, quotas, retention, cleanup and scaling limits.
 - Railway project `codeatlas` (`af286454-d14e-4f03-9954-6fe0a410f832`) is deployed in `production` with one `web` and one `analysis` replica. Only `https://web-production-f07d2d.up.railway.app` is public; analysis uses private networking and has no public domain.
 - Live Chromium journeys passed architecture and cited-question analysis for `sindresorhus/yocto-queue`, change impact for `sindresorhus/p-map`, and controlled rate limiting. An adversarial review found that accepted `www.github.com` aliases initially used a different repository key; a regression assertion failed first, the key was canonicalized, and deployment `ff912c42-0a23-424f-a2fc-b66d86437df4` then accepted six alternating canonical/www requests and rejected the seventh from their shared bucket. Railway logs exposed a distinct proxy-derived `srcIp`, proving the client admission key does not collapse all traffic into the unknown bucket.
-- The public boundary redirects HTTP to HTTPS and emits HSTS, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, and `Permissions-Policy`. The final web deployment was `ff912c42-0a23-424f-a2fc-b66d86437df4`; the final analysis deployment using `uv run --no-dev` was `42883e57-2286-4488-812d-3388dec36161`. Both currently report `SUCCESS`.
+- The public boundary redirects HTTP to HTTPS and emits HSTS, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, and `Permissions-Policy`. The final web deployment was `ff912c42-0a23-424f-a2fc-b66d86437df4`; the final analysis deployment using `uv run --no-dev` was `79bdccb3-c597-401a-87a1-08d7de2c907c`. Both report `SUCCESS`, but new repository analysis is temporarily degraded by the source-host failure described below.
 - Exact PostCSS 8.5.25 and Sharp 0.35.3 overrides resolve the audited transitive findings. `npm audit` reports zero vulnerabilities, and the unchanged test, lint, type, Fallow and production-build gates pass.
 - The workflow exists on public `main`. GitHub Actions run `30677631563` completed successfully for release commit `cfe0b521a0ea46a6e03a7690b1fe685cfbf9d7d1`. All 15 release paths were then fetched at that exact SHA and matched the local bytes.
 ## Post-release evaluation
@@ -233,7 +233,8 @@ Observed behavior:
 - A test-only synthetic evaluation corpus stores no third-party source and makes no network calls. Its executable report covers four cases and nine checks across expected status, citation support, candidate location, impact traversal, unique limitations, and warning preservation; every metric currently reports a 1.0 pass rate. Pytest asserts the exact report so retrieval-weight changes cannot silently degrade these invariants. Corpus commit `04e0eec40a410a580af9312943d68082e159783a` passed GitHub Actions run `30679109560`.
 
 - `analysis_telemetry.py` defines separate fixed enums for counters and durations, an injected observer protocol, a no-op default, and a lock-protected in-memory aggregate. It stores only counter totals and duration sample/total/max values, so memory is bounded by the enum set. Cache, GitHub source and complete-analysis timing share one private production observer; there is no endpoint or provider dependency.
-- A live-source local probe made two mitt architecture requests and observed one cache miss, one hit, two revision samples, one archive sample and two complete-analysis samples. No labels or payload fields exist in the telemetry schema.
+- A live-source local probe made two mitt architecture requests and observed one cache miss, one hit, two revision samples, one archive sample and two complete-analysis samples. No labels or payload fields exist in the telemetry schema. Telemetry commit `d5b62878f1a1ed7cc999990a178fc5f1ca5ea2bd` passed GitHub Actions run `30679541817`; analysis deployment `79bdccb3-c597-401a-87a1-08d7de2c907c` reached `SUCCESS`.
+- Two fresh public Chromium submissions after that deployment returned the controlled `GitHub source is unavailable.` error; Railway logs recorded HTTP 502 from `/v1/architecture`. The local anonymous GitHub quota remained 29/60, so it does not establish Railway egress quota. A read-only in-container quota probe was blocked because the account has no registered SSH key; no key was added. Do not upload the local `gh` credential without explicit approval of its scopes and intended Railway use. Scope inspection showed that credential has `gist`, `read:org`, `repo`, and `workflow`, which is materially broader than public-source read access and therefore unsuitable for automatic reuse. The adapter now supports an optional `CODEATLAS_GITHUB_TOKEN` bearer header only when explicitly configured; anonymous requests remain the default.
 
 ## Quality and Verification Contract
 
@@ -271,7 +272,7 @@ npm run build
 
 ### Last observed evidence
 
-- Python: 100 tests passed; Ruff formatting and lint passed; strict mypy passed.
+- Python: 101 tests passed; Ruff formatting and lint passed; strict mypy passed.
 - Web: 12 tests across 4 files passed; ESLint passed; TypeScript passed; Fallow reported 0 issues in maintained code; Next.js production build passed.
 - Local and Railway live probes: `sindresorhus/yocto-queue` verified architecture and cited questions; `sindresorhus/p-map` verified change impact with one candidate and three direct dependents. The public Railway service also verified proxy-derived rate limiting, HTTPS redirection and security headers.
 
@@ -314,6 +315,10 @@ Child-agent claims do not replace rerunning these commands in a new session.
 
 Apache-2.0 is selected, the source repository is public, GitHub private vulnerability reporting is enabled, and the publication-content review found no credential, runtime-artifact, private-data, oversized-file, or dependency-license blocker. Public `main` contains the verified release source and guidance.
 
+### Live GitHub source access
+
+Two fresh public requests returned controlled HTTP 502 responses after deployment while the service health check remained successful. Railway logs confirm the failing boundary is `/v1/architecture`; local anonymous quota does not prove Railway egress quota. Wait for anonymous quota recovery and re-probe, or explicitly approve a dedicated least-privileged GitHub credential stored only in Railway. Do not reuse the local `gh` credential implicitly. Resume condition: a fresh public architecture request succeeds and cites a pinned revision.
+
 ### Code graph
 
 The existing `<work-root>` CodeGraphContext index was discovered, but establishing directory watching failed during initialization. Use `pi.read`, `pi.grep`, and `pi.find` as authoritative fallback. If graph results are used later, verify every result against actual source.
@@ -330,10 +335,11 @@ The repository is on `main`, tracking `origin/main`. Release commit `cfe0b521a0e
 | When does measured workload justify durable artifact storage? | Determines provider, cross-replica consistency, retention and cleanup ownership | No; bounded process-local reuse handles the single-replica demo |
 | Which embedding/model providers should be supported first? | Affects cost, privacy and adapter shape | No; retrieval is later |
 | When will Next.js adopt the patched PostCSS and Sharp ranges? | Allows removal of tested transitive overrides | No; the current graph audits clean |
+| Should Railway receive a dedicated least-privileged GitHub token? | Raises source-host quota and restores predictable demo availability | Yes if anonymous access does not recover; scope and secret handling require explicit approval |
 
 ## Proposed Next Slice
 
-No implementation slice is currently approved. Operate the bounded demo and gather aggregate workload evidence first. Select an observability export, durable storage, or cross-replica coordination only when measured traffic demonstrates that the current single-process boundaries are insufficient. Generated wiki prose, autonomous edits, and pull-request creation remain outside scope unless explicitly approved.
+No feature implementation slice is approved while live source acquisition is degraded. First re-probe a fresh public repository after the anonymous quota window resets. If it still fails, obtain explicit approval for a dedicated least-privileged GitHub token, store it only as a Railway secret, wire the existing adapter to send it server-side, and verify that no credential reaches logs, source, browser bundles, or telemetry. Do not upload or repurpose the local `gh` credential.
 
 ## New-Session Bootstrap
 
@@ -355,7 +361,7 @@ Continue CodeAtlas from the repository root.
 
 First read AGENTS.md, .pi/state.md, .pi/tech-stack.md, and .pi/roadmap.md completely. Treat .pi/state.md as the current handoff, but verify its claims against source and commands. Preserve unrelated work; do not commit or push unless requested.
 
-Run git status --short --branch --untracked-files=all and ./scripts/verify.sh before editing. Phases 0–5 are complete, public, and verified. Phase 5 added audit-clean PostCSS and Sharp overrides, process-local public request controls, one-replica Railway configs, security headers, canonical repository limiter keys, and synchronized release guidance. The full gate passes 100 Python tests and 12 web tests; npm audit reports zero vulnerabilities.
+Run git status --short --branch --untracked-files=all and ./scripts/verify.sh before editing. Phases 0–5 are complete, public, and verified. Phase 5 added audit-clean PostCSS and Sharp overrides, process-local public request controls, one-replica Railway configs, security headers, canonical repository limiter keys, and synchronized release guidance. The full gate passes 101 Python tests and 12 web tests; npm audit reports zero vulnerabilities.
 
 The bounded demo is live at https://web-production-f07d2d.up.railway.app with private analysis networking. The proposed next slice is evidence-led post-release evaluation focused on source-verifiable change planning; it is not yet approved.
 

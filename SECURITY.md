@@ -15,7 +15,7 @@ A useful report includes the affected path or endpoint, reproduction steps using
 - Only public GitHub repository roots are accepted.
 - Source downloads are commit-pinned, HTTPS-only, size-bounded, decoded in memory, and never executed. Matching snapshots may remain in the single analysis process for up to five minutes under a 32-entry and 16 MiB selected-source budget; they are never written to disk.
 - Archive paths, redirects, malformed content, and unsupported source types are controlled boundaries.
-- The product stores no model, vector-store, persistence, source-host, or deployment credentials.
+- The product stores no model, vector-store, persistence, source-host, or deployment credentials. An optional `CODEATLAS_GITHUB_TOKEN` is read only from the analysis service environment and sent server-side to GitHub; it never enters browser bundles, source, telemetry, or application responses.
 - Generated source claims remain separate from future model inference.
 - Operational telemetry uses fixed metric names and aggregate count/total/max values only. It carries no repository URLs, source, questions, client identifiers, or credentials and has no public diagnostics endpoint.
 

@@ -34,6 +34,8 @@ uv sync --locked
 uv run uvicorn codeatlas_analysis.api:app --reload
 ```
 
+Public GitHub access is anonymous by default. For a deployed demo that needs predictable source-host quota, set `CODEATLAS_GITHUB_TOKEN` only in the server-side platform secret store using a dedicated least-privileged token; never expose it to the web bundle.
+
 The current API exposes `GET /v1/health`, `POST /v1/repositories`, synchronous `POST /v1/architecture`, `POST /v1/questions`, `POST /v1/impact`, and generated OpenAPI documentation at `/docs`.
 
 ### Web application
@@ -71,7 +73,7 @@ The synthetic corpus reports pass rates for expected status, citation support, c
 
 Phase 2 structural understanding, Phase 3 cited questions, and Phase 4 change impact are implemented. A user can analyze a bounded public TypeScript or JavaScript repository, inspect commit-pinned architecture, ask deterministic cited questions, and trace candidate change locations into direct and transitive dependent modules. Semantic retrieval uses the same evidence contract through an injected embedding protocol; no model or embedding provider dependency is selected. Reports expose confidence, unresolved evidence, traversal limits, and the warning that dependency proximity is not certainty.
 
-A live `sindresorhus/p-map` impact probe located `pMap` at `index.js:1` and cited three direct dependents at their import lines. The complete local gate currently covers 100 Python tests and 12 web tests. The web dependency graph now audits clean through tested PostCSS and Sharp overrides. Process-local request, repository, concurrency, timeout, memory, and five-minute commit-keyed snapshot-cache bounds protect the deployed single-replica demo. Fixed-name aggregate telemetry measures cache and acquisition effectiveness without repository, source, query, or client labels. Railway serves only the web publicly; live architecture, cited-question, impact, HTTPS hardening, and rate-limit behavior have been verified.
+A live `sindresorhus/p-map` impact probe located `pMap` at `index.js:1` and cited three direct dependents at their import lines. The complete local gate currently covers 101 Python tests and 12 web tests. The web dependency graph now audits clean through tested PostCSS and Sharp overrides. Process-local request, repository, concurrency, timeout, memory, and five-minute commit-keyed snapshot-cache bounds protect the deployed single-replica demo. Fixed-name aggregate telemetry measures cache and acquisition effectiveness without repository, source, query, or client labels. Railway serves only the web publicly; live architecture, cited-question, impact, HTTPS hardening, and rate-limit behavior have been verified.
 
 ## License
 
