@@ -224,6 +224,8 @@ Observed behavior:
 - Lexical symbol scoring now adds a bounded 0.25-weight precision component based on matched symbol terms over total symbol terms. Query coverage remains dominant; exact `pMap` now scores 2.25 and related `pMapSkip` scores lower without a path- or language-specific heuristic.
 - Re-evaluation selected `index.js:1` for pMap, reported medium confidence, restored three direct dependent modules, preserved two unresolved-relationship warnings, and completed in 943 ms. The full repository gate passes with 82 Python and 12 web tests. Fix commit `8624ce7eaadbdae69114e3b19dba79cebac0edc2` passed GitHub Actions run `30678051346`.
 - Private analysis deployment `b0e8a6fa-f24d-420e-afe7-fb229f351f05` reached `SUCCESS`. A fresh live Chromium journey through the public web service rendered pMap at `index.js · L1`, three direct impacted modules at their import lines, medium confidence, and both uncertainty warnings.
+- Three repeated mitt question requests at the same revision returned identical status and citations in 632, 578, and 573 ms (578 ms median). Every question still follows the source reacquisition and reparsing path, so commit-keyed artifacts are justified as the next scaling design boundary, but no persistence provider or dependency is selected.
+- Mitt architecture initially projected eight limitations because one unresolved or external import produced one warning per imported symbol. A regression case with default and named imports failed first. Exact duplicate `(code, path, line, subject)` records are now collapsed in first-source order; re-evaluation returned five distinct limitations in 867 ms without hiding either unresolved entry point or any distinct external dependency.
 
 ## Quality and Verification Contract
 
@@ -325,14 +327,15 @@ The repository is on `main`, tracking `origin/main`. Release commit `cfe0b521a0e
 
 This is a proposal, not an approved implementation contract.
 
-**Goal:** define the post-release roadmap around CodeAtlas's strongest distinction: source-verifiable change planning rather than generic generated documentation.
+**Goal:** specify a provider-neutral, commit-keyed analysis artifact lifecycle before adding persistence.
 
 Candidate acceptance boundary:
 
-1. Evaluate feature-location and impact reports on representative public repositories with expected evidence.
-2. Measure citation support, unsupported-question behavior, acquisition latency and repeated-analysis cost.
-3. Decide whether commit-keyed artifact persistence is justified before adding a provider.
-4. Keep generated wiki prose, autonomous edits and pull-request creation outside scope unless explicitly approved.
+1. Key immutable artifacts by normalized repository identity plus resolved full commit SHA.
+2. Define capacity, TTL, deletion, failure, and concurrent-request behavior without adding a storage dependency.
+3. Preserve the current framework-neutral `RepositoryAnalysis` boundary and keep source-host/storage details in adapters.
+4. Measure the proposed cache against the deterministic repeated-analysis baseline before selecting an in-memory or durable provider.
+5. Keep generated wiki prose, autonomous edits, and pull-request creation outside scope unless explicitly approved.
 
 ## New-Session Bootstrap
 

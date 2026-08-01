@@ -128,5 +128,5 @@ def build_architecture_view(structure: RepositoryStructure) -> ArchitectureView:
         revision=structure.revision,
         modules=modules,
         relationships=relationships,
-        limitations=parse_limitations + relationship_limitations,
+        limitations=tuple(dict.fromkeys(parse_limitations + relationship_limitations)),
     )

@@ -15,7 +15,7 @@ def test_builds_a_source_cited_architecture_view_with_explicit_limits() -> None:
         (
             "src/index.ts",
             "import { User } from './types';\n"
-            "import React from 'react';\n"
+            "import React, { useState } from 'react';\n"
             "import { missing } from './missing';\n"
             "export function load() {}\n"
             "const privateValue = 1;\n",
@@ -67,6 +67,7 @@ def test_builds_a_source_cited_architecture_view_with_explicit_limits() -> None:
     ] == [
         ("src/index.ts", 1, "User", "src/types.ts", "User", "resolved"),
         ("src/index.ts", 2, "React", None, "default", "external"),
+        ("src/index.ts", 2, "useState", None, "useState", "external"),
         ("src/index.ts", 3, "missing", None, "missing", "module_unresolved"),
     ]
     assert [
