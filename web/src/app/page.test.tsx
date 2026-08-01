@@ -31,15 +31,13 @@ describe("CodeAtlas landing page", () => {
 
   it("announces analysis and presents source-cited architecture", async () => {
     let resolveRequest: (response: Response) => void = () => undefined;
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        () =>
-          new Promise<Response>((resolve) => {
-            resolveRequest = resolve;
-          }),
-      ),
+    const fetchMock = vi.fn(
+      () =>
+        new Promise<Response>((resolve) => {
+          resolveRequest = resolve;
+        }),
     );
+    vi.stubGlobal("fetch", fetchMock);
     render(<Home />);
 
     fireEvent.change(screen.getByLabelText("Public GitHub repository URL"), {
@@ -54,6 +52,8 @@ describe("CodeAtlas landing page", () => {
     expect(screen.getByRole("status").textContent).toContain(
       "Analyzing repository…",
     );
+
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
 
     resolveRequest(
       new Response(

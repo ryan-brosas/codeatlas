@@ -2,11 +2,11 @@
 
 ## Current status
 
-CodeAtlas has a public source repository but remains a pre-release prototype. It has no deployed service, supported release, or public security intake channel. Do not treat the current checkout as a production service.
+CodeAtlas has a public source repository and a bounded public demo, but remains a pre-release prototype rather than a production service. GitHub private vulnerability reporting is enabled for confidential security intake.
 
 ## Reporting a vulnerability
 
-Before publication, the repository owner must enable GitHub private vulnerability reporting or publish a dedicated security contact. Until that channel exists, do not disclose exploit details in a public issue.
+Use GitHub's private vulnerability-reporting form for this repository. Do not disclose exploit details in a public issue.
 
 A useful report includes the affected path or endpoint, reproduction steps using non-sensitive data, impact, and any suggested mitigation. Never include real credentials, private repository contents, or third-party personal data.
 
@@ -15,12 +15,13 @@ A useful report includes the affected path or endpoint, reproduction steps using
 - Only public GitHub repository roots are accepted.
 - Source downloads are commit-pinned, HTTPS-only, size-bounded, decoded in memory, and never executed.
 - Archive paths, redirects, malformed content, and unsupported source types are controlled boundaries.
-- Model, vector-store, persistence, and deployment credentials are not implemented.
+- The product stores no model, vector-store, persistence, source-host, or deployment credentials.
 - Generated source claims remain separate from future model inference.
 
-## Known pre-release blockers
+## Known pre-release limitations
 
-- `npm audit` currently reports three high-severity transitive advisories through the web stack. npm's proposed resolution is incompatible with the selected Next.js line. Reassess and resolve or explicitly risk-accept them before deployment.
-- No public rate limiter, abuse control, durable job system, artifact retention policy, or authentication boundary exists.
+- `npm audit` is clean with exact PostCSS 8.5.25 and Sharp 0.35.3 overrides. Next.js 16.2.12 still declares older transitive ranges, so keep the complete web gate and audit as release checks until upstream catches up.
+- Process-local rate, repository, concurrency, timeout, and key-count controls protect the verified single-replica web boundary. They are not a distributed limiter. No durable job system, artifact persistence, or authentication boundary exists.
+- The Railway web domain redirects HTTP to HTTPS and emits HSTS, MIME-sniffing, framing, referrer, and permissions-policy headers. The analysis service has no public domain.
 
 Security fixes must pass `./scripts/verify.sh` and include a regression test when the failure is reproducible.

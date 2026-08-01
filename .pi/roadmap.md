@@ -101,12 +101,13 @@ This roadmap gives future sessions direction without turning ordinary work into 
 **Success criteria:**
 
 - [x] Open-source license selected and added.
-- [ ] npm audit advisories resolved or explicitly risk-accepted with compensating controls.
+- [x] npm audit advisories resolved or explicitly risk-accepted with compensating controls.
 - [x] Deployment architecture, secrets, quotas and cleanup documented.
-- [ ] Live demo uses bounded public data and abuse controls.
+- [x] Live demo uses bounded public data and abuse controls.
 - [x] README includes a concise demo, architecture and measured results.
 - [x] CONTRIBUTING and SECURITY guidance exist.
 - [x] CI runs the same repository verification gate used locally.
+- [ ] Public `main` reflects the deployed release documentation, configuration, and bounded-control source.
 
 ## Roadmap Rules
 
