@@ -41,6 +41,30 @@ def _structure() -> RepositoryStructure:
     return analyze_repository(snapshot, parse_source_module)
 
 
+def _structure_with_declaration() -> RepositoryStructure:
+    sources = (
+        ("index.d.ts", "export const runTaskSkip: unique symbol;\n"),
+        ("index.js", "export function runTask() {}\n"),
+        (
+            "consumer.js",
+            'import { runTask } from "./index.js";\nrunTask();\n',
+        ),
+    )
+    snapshot = RepositorySnapshot(
+        repository=normalize_public_github_repository("https://github.com/example/project"),
+        revision="0123456789abcdef0123456789abcdef01234567",
+        files=tuple(
+            RepositoryFile(
+                path=path,
+                content=source,
+                size_bytes=len(source.encode()),
+            )
+            for path, source in sources
+        ),
+    )
+    return analyze_repository(snapshot, parse_source_module)
+
+
 def test_locates_implementation_and_explains_direct_and_transitive_impact() -> None:
     from codeatlas_analysis.change_impact import (
         ImpactConfidence,
@@ -62,6 +86,15 @@ def test_locates_implementation_and_explains_direct_and_transitive_impact() -> N
     ]
     assert report.truncated is False
     assert report.warnings == ("Dependency proximity identifies possible impact, not certainty.",)
+
+
+def test_prefers_exact_implementation_symbol_over_related_declaration() -> None:
+    from codeatlas_analysis.change_impact import analyze_change_impact
+
+    report = analyze_change_impact(_structure_with_declaration(), "Where is runTask implemented?")
+
+    assert report.candidates[0].citation.path == "index.js"
+    assert [(impact.path, impact.depth) for impact in report.impacts] == [("consumer.js", 1)]
 
 
 def test_reports_missing_location_evidence_without_guessing() -> None:

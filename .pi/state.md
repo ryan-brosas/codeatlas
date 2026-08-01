@@ -21,7 +21,7 @@ Phases 0–4 are implemented. CodeAtlas analyzes bounded public TypeScript and J
 | HEAD | `main` tracks `origin/main`; use `git rev-parse HEAD` for the current commit |
 | Worktree | Modified by the approved Phase 5 release-readiness slice; no commit requested |
 | Current phase | Phase 5 complete; live deployment and public source verified |
-| Last full verification | `./scripts/verify.sh`, exit 0 on 2026-08-01 with 81 Python and 12 web tests |
+| Last full verification | `./scripts/verify.sh`, exit 0 on 2026-08-01 with 82 Python and 12 web tests |
 | Publication status | Source public at `https://github.com/ryan-brosas/codeatlas` under Apache-2.0 and synchronized with the live demo at `https://web-production-f07d2d.up.railway.app` |
 
 The bounded Railway demo and matching public source are live. The demo is not a production SLA-backed service.
@@ -216,6 +216,14 @@ Observed behavior:
 - The public boundary redirects HTTP to HTTPS and emits HSTS, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, and `Permissions-Policy`. The final web deployment was `ff912c42-0a23-424f-a2fc-b66d86437df4`; the final analysis deployment using `uv run --no-dev` was `56169561-6269-42cf-b709-4f3471675817`. Both currently report `SUCCESS`.
 - Exact PostCSS 8.5.25 and Sharp 0.35.3 overrides resolve the audited transitive findings. `npm audit` reports zero vulnerabilities, and the unchanged test, lint, type, Fallow and production-build gates pass.
 - The workflow exists on public `main`. GitHub Actions run `30677631563` completed successfully for release commit `cfe0b521a0ea46a6e03a7690b1fe685cfbf9d7d1`. All 15 release paths were then fetched at that exact SHA and matched the local bytes.
+## Post-release evaluation
+
+- Direct TestClient probes against current public source hosts measured `developit/mitt` architecture at 920 ms, cited questions at 606 ms, an unsupported billing question at 617 ms, `sindresorhus/yocto-queue` cited questions at 858 ms, and `sindresorhus/p-map` impact at 883 ms. These are single observed local timings, not performance guarantees.
+- Mitt and yocto-queue questions returned concrete source citations with empty inference. The unsupported billing question returned `insufficient_evidence` with no facts, evidence, or inference.
+- The p-map impact query exposed a deterministic ranking defect: related `pMapSkip` in `index.d.ts` tied exact `pMap` and won by path order, hiding the useful reverse dependencies. A parsed regression fixture failed first.
+- Lexical symbol scoring now adds a bounded 0.25-weight precision component based on matched symbol terms over total symbol terms. Query coverage remains dominant; exact `pMap` now scores 2.25 and related `pMapSkip` scores lower without a path- or language-specific heuristic.
+- Re-evaluation selected `index.js:1` for pMap, reported medium confidence, restored three direct dependent modules, preserved two unresolved-relationship warnings, and completed in 943 ms. The full repository gate passes with 82 Python and 12 web tests.
+
 ## Quality and Verification Contract
 
 Run the repository gate from the project root:
@@ -252,7 +260,7 @@ npm run build
 
 ### Last observed evidence
 
-- Python: 81 tests passed; Ruff formatting and lint passed; strict mypy passed.
+- Python: 82 tests passed; Ruff formatting and lint passed; strict mypy passed.
 - Web: 12 tests across 4 files passed; ESLint passed; TypeScript passed; Fallow reported 0 issues in maintained code; Next.js production build passed.
 - Local and Railway live probes: `sindresorhus/yocto-queue` verified architecture and cited questions; `sindresorhus/p-map` verified change impact with one candidate and three direct dependents. The public Railway service also verified proxy-derived rate limiting, HTTPS redirection and security headers.
 
@@ -345,7 +353,7 @@ Continue CodeAtlas from the repository root.
 
 First read AGENTS.md, .pi/state.md, .pi/tech-stack.md, and .pi/roadmap.md completely. Treat .pi/state.md as the current handoff, but verify its claims against source and commands. Preserve unrelated work; do not commit or push unless requested.
 
-Run git status --short --branch --untracked-files=all and ./scripts/verify.sh before editing. Phases 0–5 are complete, public, and verified. Phase 5 added audit-clean PostCSS and Sharp overrides, process-local public request controls, one-replica Railway configs, security headers, canonical repository limiter keys, and synchronized release guidance. The full gate passes 81 Python tests and 12 web tests; npm audit reports zero vulnerabilities.
+Run git status --short --branch --untracked-files=all and ./scripts/verify.sh before editing. Phases 0–5 are complete, public, and verified. Phase 5 added audit-clean PostCSS and Sharp overrides, process-local public request controls, one-replica Railway configs, security headers, canonical repository limiter keys, and synchronized release guidance. The full gate passes 82 Python tests and 12 web tests; npm audit reports zero vulnerabilities.
 
 The bounded demo is live at https://web-production-f07d2d.up.railway.app with private analysis networking. The proposed next slice is evidence-led post-release evaluation focused on source-verifiable change planning; it is not yet approved.
 

@@ -7,6 +7,7 @@ from codeatlas_analysis.repository_structure import RepositoryStructure
 
 _WORD = re.compile(r"[A-Za-z]+|[0-9]+")
 _CAMEL_WORD = re.compile(r"[A-Z]?[a-z]+|[A-Z]+(?![a-z])|[0-9]+")
+_SYMBOL_PRECISION_WEIGHT = 0.25
 _STOP_WORDS = {
     "a",
     "an",
@@ -142,6 +143,15 @@ def _terms(text: str) -> set[str]:
     return terms
 
 
+def _symbol_precision(document: EvidenceDocument, query_terms: set[str]) -> float:
+    if document.kind is not EvidenceKind.SYMBOL or document.citation.symbol is None:
+        return 0.0
+    symbol_terms = _terms(document.citation.symbol)
+    if not symbol_terms:
+        return 0.0
+    return len(query_terms & symbol_terms) / len(symbol_terms)
+
+
 def _lexical_evidence(
     document: EvidenceDocument, query_terms: set[str]
 ) -> RetrievedEvidence | None:
@@ -157,7 +167,8 @@ def _lexical_evidence(
             EvidenceKind.RELATIONSHIP: 0.5,
             EvidenceKind.SYMBOL: 1.0,
         }[document.kind]
-        + len(matched_terms) / len(query_terms),
+        + len(matched_terms) / len(query_terms)
+        + _SYMBOL_PRECISION_WEIGHT * _symbol_precision(document, query_terms),
         matched_terms=matched_terms,
         method=RetrievalMethod.LEXICAL,
     )
