@@ -21,7 +21,7 @@ Phases 0–4 are implemented. CodeAtlas analyzes bounded public TypeScript and J
 | HEAD | `main` tracks `origin/main`; use `git rev-parse HEAD` for the current commit |
 | Worktree | Use `git status --short --branch --untracked-files=all`; preserve unrelated work |
 | Current phase | Phase 5 complete; telemetry and optional source-auth seam deployed; live source acquisition verified |
-| Last full verification | `./scripts/verify.sh`, exit 0 on 2026-08-01 with 101 Python and 12 web tests; offline corpus 9/9 checks; npm audit 0 vulnerabilities |
+| Last full verification | `./scripts/verify.sh`, exit 0 on 2026-08-01 with 104 Python and 12 web tests; offline corpus 9/9 checks; npm audit 0 vulnerabilities |
 | Publication status | Source public and synchronized under Apache-2.0; live demo healthy at `https://web-production-f07d2d.up.railway.app` with anonymous GitHub access recovered |
 
 The bounded Railway demo and matching public source are live. Anonymous GitHub access recovered without configuring a token; the optional least-privilege seam remains available if measured quota failures recur. The demo is not a production SLA-backed service.
@@ -236,7 +236,8 @@ Observed behavior:
 - A live-source local probe made two mitt architecture requests and observed one cache miss, one hit, two revision samples, one archive sample and two complete-analysis samples. No labels or payload fields exist in the telemetry schema. Telemetry commit `d5b62878f1a1ed7cc999990a178fc5f1ca5ea2bd` passed GitHub Actions run `30679541817`; analysis deployment `79bdccb3-c597-401a-87a1-08d7de2c907c` reached `SUCCESS`.
 - Two fresh public Chromium submissions after that deployment returned the controlled `GitHub source is unavailable.` error; Railway logs recorded HTTP 502 from `/v1/architecture`. The local anonymous GitHub quota remained 29/60, so it does not establish Railway egress quota. A read-only in-container quota probe was blocked because the account has no registered SSH key; no key was added. Do not upload the local `gh` credential without explicit approval of its scopes and intended Railway use. Scope inspection showed that credential has `gist`, `read:org`, `repo`, and `workflow`, which is materially broader than public-source read access and therefore unsuitable for automatic reuse. The adapter now supports an optional `CODEATLAS_GITHUB_TOKEN` bearer header only when explicitly configured; anonymous requests remain the default. Optional-auth commit `e9883b7fc1455c03596fccab4e58a583d8aacecd` passed GitHub Actions run `30679944806`; deployment `9bb74038-4c8b-419b-a58a-93b655974865` reached `SUCCESS` with no token configured, and the subsequent public pinned-architecture probe succeeded.
 
-- A post-release self-analysis of public CodeAtlas revision `d589626f97a8` completed architecture in 1,610 ms with 18 modules, 64 relationships and 17 distinct limitations. The question flow answered from three citations in `request-admission.ts` with no inference in 240 ms. Impact selected `RequestAdmission` at line 50 in 248 ms, cited two direct and six transitive dependents, and preserved unresolved-relationship plus traversal-boundary warnings.
+- Initial self-analysis exposed three unresolved internal relationships: two extensionless imports of `generated.d.ts` and one default import targeting `export default nextConfig`. Regression tests failed first. Extensionless `.d.ts` files are now declaration fallbacks only after runtime candidates, preserving ambiguity among runtime suffixes and preventing declarations from shadowing `.ts`; default-exported local identifiers now add a verified default surface without discarding an existing named export. The offline corpus caught the first equal-precedence attempt because it broke impact traversal and limitation uniqueness.
+- Re-evaluation of public CodeAtlas revision `b079612f0375` completed architecture in 1,360 ms with 18 modules, 64 relationships, 15 distinct limitations and zero unresolved internal relationships. Impact selected `RequestAdmission` at line 50 in 164 ms, retained the same two direct and six transitive dependents, removed the obsolete unresolved warning, and preserved the traversal-boundary warning.
 
 ## Quality and Verification Contract
 
@@ -274,7 +275,7 @@ npm run build
 
 ### Last observed evidence
 
-- Python: 101 tests passed; Ruff formatting and lint passed; strict mypy passed.
+- Python: 104 tests passed; Ruff formatting and lint passed; strict mypy passed.
 - Web: 12 tests across 4 files passed; ESLint passed; TypeScript passed; Fallow reported 0 issues in maintained code; Next.js production build passed.
 - Local and Railway live probes: `sindresorhus/yocto-queue` verified architecture and cited questions; `sindresorhus/p-map` verified change impact with one candidate and three direct dependents. The public Railway service also verified proxy-derived rate limiting, HTTPS redirection and security headers.
 
@@ -363,7 +364,7 @@ Continue CodeAtlas from the repository root.
 
 First read AGENTS.md, .pi/state.md, .pi/tech-stack.md, and .pi/roadmap.md completely. Treat .pi/state.md as the current handoff, but verify its claims against source and commands. Preserve unrelated work; do not commit or push unless requested.
 
-Run git status --short --branch --untracked-files=all and ./scripts/verify.sh before editing. Phases 0–5 are complete, public, and verified. Phase 5 added audit-clean PostCSS and Sharp overrides, process-local public request controls, one-replica Railway configs, security headers, canonical repository limiter keys, and synchronized release guidance. The full gate passes 101 Python tests and 12 web tests; npm audit reports zero vulnerabilities.
+Run git status --short --branch --untracked-files=all and ./scripts/verify.sh before editing. Phases 0–5 are complete, public, and verified. Phase 5 added audit-clean PostCSS and Sharp overrides, process-local public request controls, one-replica Railway configs, security headers, canonical repository limiter keys, and synchronized release guidance. The full gate passes 104 Python tests and 12 web tests; npm audit reports zero vulnerabilities.
 
 The bounded demo is live at https://web-production-f07d2d.up.railway.app with private analysis networking. The proposed next slice is evidence-led post-release evaluation focused on source-verifiable change planning; it is not yet approved.
 

@@ -142,6 +142,56 @@ def test_does_not_guess_when_relative_module_resolution_is_ambiguous() -> None:
     assert dependency.resolved_path is None
 
 
+def test_resolves_extensionless_import_to_declaration_file() -> None:
+    source = "import type { Generated } from './generated';\n"
+    declaration = "export interface Generated {}\n"
+    snapshot = RepositorySnapshot(
+        repository=normalize_public_github_repository("https://github.com/example/project"),
+        revision="0123456789abcdef0123456789abcdef01234567",
+        files=(
+            RepositoryFile(path="src/index.ts", content=source, size_bytes=len(source.encode())),
+            RepositoryFile(
+                path="src/generated.d.ts",
+                content=declaration,
+                size_bytes=len(declaration.encode()),
+            ),
+        ),
+    )
+
+    structure = analyze_repository(snapshot, parse_source_module)
+
+    assert structure.modules[0].dependencies[0].resolved_path == "src/generated.d.ts"
+    assert structure.relationships[0].resolution.value == "resolved"
+
+
+def test_prefers_runtime_module_over_declaration_fallback() -> None:
+    source = "import { User } from './user';\n"
+    runtime = "export interface User {}\n"
+    declaration = "export interface User {}\n"
+    snapshot = RepositorySnapshot(
+        repository=normalize_public_github_repository("https://github.com/example/project"),
+        revision="0123456789abcdef0123456789abcdef01234567",
+        files=(
+            RepositoryFile(path="src/index.ts", content=source, size_bytes=len(source.encode())),
+            RepositoryFile(
+                path="src/user.ts",
+                content=runtime,
+                size_bytes=len(runtime.encode()),
+            ),
+            RepositoryFile(
+                path="src/user.d.ts",
+                content=declaration,
+                size_bytes=len(declaration.encode()),
+            ),
+        ),
+    )
+
+    relationship = analyze_repository(snapshot, parse_source_module).relationships[0]
+
+    assert relationship.target_module_path == "src/user.ts"
+    assert relationship.resolution.value == "resolved"
+
+
 def test_connects_imported_bindings_to_exported_source_symbols() -> None:
     index_source = (
         "import { User, Missing as LocalMissing } from './types';\n"
@@ -205,6 +255,33 @@ def test_resolves_default_imports_against_default_exports() -> None:
     relationship = analyze_repository(snapshot, parse_source_module).relationships[0]
 
     assert relationship.local_name == "UserService"
+    assert relationship.target_symbol_name == "default"
+    assert relationship.resolution.value == "resolved"
+
+
+def test_resolves_default_import_from_exported_local_identifier() -> None:
+    index_source = "import nextConfig from './next.config';\n"
+    config_source = "const nextConfig = {};\nexport default nextConfig;\n"
+    snapshot = RepositorySnapshot(
+        repository=normalize_public_github_repository("https://github.com/example/project"),
+        revision="0123456789abcdef0123456789abcdef01234567",
+        files=(
+            RepositoryFile(
+                path="next.config.test.ts",
+                content=index_source,
+                size_bytes=len(index_source.encode()),
+            ),
+            RepositoryFile(
+                path="next.config.ts",
+                content=config_source,
+                size_bytes=len(config_source.encode()),
+            ),
+        ),
+    )
+
+    relationship = analyze_repository(snapshot, parse_source_module).relationships[0]
+
+    assert relationship.target_module_path == "next.config.ts"
     assert relationship.target_symbol_name == "default"
     assert relationship.resolution.value == "resolved"
 

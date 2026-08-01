@@ -1,5 +1,5 @@
 from bisect import bisect_right
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import tree_sitter_typescript
 from tree_sitter import Language, Node, Parser
@@ -240,6 +240,43 @@ def _syntax_diagnostics(root: Node, source: _SourceCoordinates) -> tuple[ParseDi
     return tuple(diagnostics)
 
 
+def _exported_symbols(
+    statement: Node, source: _SourceCoordinates
+) -> tuple[list[SourceSymbol], str | None]:
+    is_default = any(child.type == "default" for child in statement.children)
+    declaration = statement.child_by_field_name("declaration")
+    if declaration is not None:
+        return (
+            _declaration_symbols(
+                declaration,
+                source,
+                exported=True,
+                default_export=is_default,
+            ),
+            None,
+        )
+    if not is_default:
+        return [], None
+    identifier = next(
+        (child for child in statement.named_children if child.type == "identifier"),
+        None,
+    )
+    return ([], _node_text(source, identifier) if identifier is not None else None)
+
+
+def _apply_default_identifier_exports(symbols: list[SourceSymbol], names: list[str]) -> None:
+    for name in dict.fromkeys(names):
+        for index, symbol in enumerate(symbols):
+            if symbol.name != name:
+                continue
+            default_symbol = replace(symbol, exported=True, export_name="default")
+            if symbol.export_name is None:
+                symbols[index] = default_symbol
+            elif symbol.export_name != "default":
+                symbols.append(default_symbol)
+            break
+
+
 def parse_source_module(file: RepositoryFile) -> SourceModule:
     language = source_language_for_path(file.path)
     if language is SourceLanguage.JSON:
@@ -250,6 +287,7 @@ def parse_source_module(file: RepositoryFile) -> SourceModule:
     symbols: list[SourceSymbol] = []
     dependencies: list[ModuleDependency] = []
     bindings: list[SymbolBinding] = []
+    default_export_names: list[str] = []
     for node in root.named_children:
         if node.type == "import_statement":
             specifier = node.child_by_field_name("source")
@@ -276,18 +314,14 @@ def parse_source_module(file: RepositoryFile) -> SourceModule:
                     )
                 )
                 bindings.extend(_re_export_bindings(node, source, specifier_text))
-            declaration = node.child_by_field_name("declaration")
-            if declaration is not None:
-                symbols.extend(
-                    _declaration_symbols(
-                        declaration,
-                        source,
-                        exported=True,
-                        default_export=any(child.type == "default" for child in node.children),
-                    )
-                )
+            exported_symbols, default_export_name = _exported_symbols(node, source)
+            symbols.extend(exported_symbols)
+            if default_export_name is not None:
+                default_export_names.append(default_export_name)
             continue
         symbols.extend(_declaration_symbols(node, source, exported=False))
+
+    _apply_default_identifier_exports(symbols, default_export_names)
 
     return SourceModule(
         path=file.path,

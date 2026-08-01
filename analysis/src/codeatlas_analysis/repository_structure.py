@@ -138,6 +138,7 @@ class ModuleParser(Protocol):
 
 
 _CODE_SUFFIXES = (".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs")
+_DECLARATION_SUFFIXES = (".d.ts",)
 _LANGUAGE_BY_SUFFIX = {
     ".cjs": SourceLanguage.JAVASCRIPT,
     ".js": SourceLanguage.JAVASCRIPT,
@@ -164,11 +165,17 @@ def _resolve_dependency(
     candidates: tuple[str, ...]
     if PurePosixPath(base).suffix in _CODE_SUFFIXES:
         candidates = (base,)
+        matches = tuple(candidate for candidate in candidates if candidate in source_paths)
     else:
         candidates = tuple(base + suffix for suffix in _CODE_SUFFIXES) + tuple(
             join(base, "index" + suffix) for suffix in _CODE_SUFFIXES
         )
-    matches = tuple(candidate for candidate in candidates if candidate in source_paths)
+        matches = tuple(candidate for candidate in candidates if candidate in source_paths)
+        if not matches:
+            declarations = tuple(base + suffix for suffix in _DECLARATION_SUFFIXES) + tuple(
+                join(base, "index" + suffix) for suffix in _DECLARATION_SUFFIXES
+            )
+            matches = tuple(candidate for candidate in declarations if candidate in source_paths)
     if len(matches) == 1:
         return replace(
             dependency,
